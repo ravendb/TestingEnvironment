@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -69,8 +68,7 @@ namespace TestingEnvironment.Orchestrator
             
             EmbeddedServer.Instance.StartServer(new ServerOptions
             {  
-                ServerUrl = "http://0.0.0.0:8091",
-                CommandLineArgs = new List<string> { " --Security.UnsecuredAccessAllowed=PublicNetwork ", " --Setup.Mode=None ", " --PublicServerUrl=http://10.0.0.69:8091 "}
+                ServerUrl = "http://127.0.0.1:8090"
             });
             _reportingDocumentStore = EmbeddedServer.Instance.GetDocumentStore(new DatabaseOptions(OrchestratorDatabaseName));
             _reportingDocumentStore.Initialize();
@@ -151,7 +149,7 @@ namespace TestingEnvironment.Orchestrator
                     TestClassName = testClassName,
                     Author = author,
                     Start = now,
-                    Events = new List<EventInfoWithExceptionAsString>(),
+                    Events = new List<EventInfo>(),
                     Config = testConfig //record what servers we are working with in this particular test
                 });
                 session.SaveChanges();
@@ -183,15 +181,14 @@ namespace TestingEnvironment.Orchestrator
             }
         }
 
-        public EventResponse ReportEvent(string testName, EventInfoWithExceptionAsString @eventWithExceptionAsString)
+        public EventResponse ReportEvent(string testName, EventInfo @event)
         {
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
                 var latestTest = session.Query<TestInfo>().OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName);
                 if (latestTest != null)
                 {
-                    eventWithExceptionAsString.EventTime = DateTime.UtcNow.ToString(CultureInfo.InvariantCulture);
-                    latestTest.Events.Add(@eventWithExceptionAsString);
+                    latestTest.Events.Add(@event);
                     session.SaveChanges();
                 }
 
@@ -208,16 +205,16 @@ namespace TestingEnvironment.Orchestrator
             var databaseNames = documentStore.Maintenance.Server.Send(new GetDatabaseNamesOperation(0, int.MaxValue));
             if (truncateExisting && databaseNames.Contains(databaseName))
             {
-//                var result = documentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, true));
-//                if (result.PendingDeletes.Length > 0)
-//                {
-//                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
-//                        documentStore.GetRequestExecutor()
-//                            .Execute(new WaitForRaftIndexCommand(result.RaftCommandIndex), ctx);
-//                }
-//
-//                var doc = new DatabaseRecord(databaseName);
-//                documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, documentStore.Urls.Length));
+                var result = documentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, true));
+                if (result.PendingDeletes.Length > 0)
+                {
+                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                        documentStore.GetRequestExecutor()
+                            .Execute(new WaitForRaftIndexCommand(result.RaftCommandIndex), ctx);
+                }
+
+                var doc = new DatabaseRecord(databaseName);
+                documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, documentStore.Urls.Length));
 
             }
             else if (!databaseNames.Contains(databaseName))
