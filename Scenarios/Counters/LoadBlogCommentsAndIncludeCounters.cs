@@ -1,57 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using TestingEnvironment.Client;
 
 namespace Counters
 {
-    public class QueryBlogCommentsAndIncludeCounters : BaseTest
+    public class LoadBlogCommentsAndIncludeCounters : BaseTest
     {
-        #region DTO
-
-        public class ProjectionResult
-        {
-            public string Id { get; set; }
-            public string Tag { get; set; }
-            public double Rating { get; set; }
-            public long? Likes { get; set; }
-            public long? Dislikes { get; set; }
-            public long? TotalViews { get; set; }
-        }
-
-        #endregion
-
-        public QueryBlogCommentsAndIncludeCounters(string orchestratorUrl) : base(orchestratorUrl, "QueryBlogCommentsAndIncludeCounters", "Aviv")
+        public LoadBlogCommentsAndIncludeCounters(string orchestratorUrl) : base(orchestratorUrl, "LoadBlogCommentsAndIncludeCounters", "Aviv")
         {
         }
 
         public override void RunActualTest()
         {
+            var ids = new List<string>();
             using (var session = DocumentStore.OpenSession())
             {
-                ReportInfo("Started querying docs with including counters");
+                ReportInfo("Started querying docs where PostedAt > new DateTime(2017, 1, 1) and Rating > 0");
 
                 var query = session.Query<BlogComment>()
                     .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30)))
                     .Where(comment => comment.PostedAt > new DateTime(2017, 1, 1) && comment.Rating > 0)
-                    .Include(includeBuilder =>
-                        includeBuilder.IncludeAllCounters())
-                    .Select(x => new ProjectionResult
-                    {
-                        Id = x.Id,
-                        Tag = x.Tag,
-                        Rating = x.Rating
-                    });
+                    .Select(x => x.Id);
 
-                List<ProjectionResult> result;
                 var retries = 3;
                 while (true)
                 {
                     try
                     {
-                        result = query.ToList();
+                        ids = query.ToList();
                         break;
                     }
                     catch (Exception e)
@@ -67,26 +45,34 @@ namespace Counters
                     }
                 }
 
-                if (result.Count == 0)
+                if (ids.Count == 0)
                 {
                     ReportInfo("No matching results. Aborting");
                     return;
                 }
 
-                ReportInfo($"Found {result.Count} matching results. " +
-                           "Asserting 1 <= number-of-counters <= 3 for each result " +
+                ReportInfo($"Found {ids.Count} matching results. " +
+                           "Starting to load these docs and including their counters." +
+                           "Asserting 1 <= number-of-counters <= 3 for each result, " +
                            "and that all included counters are cached in session. ");
 
-                var numOfRequest = session.Advanced.NumberOfRequests;
+            }
 
-                foreach (var doc in result)
+            foreach (var id in ids)
+            {
+                using (var session = DocumentStore.OpenSession())
                 {
-                    var all = session.CountersFor(doc.Id).GetAll();
+                    var doc = session.Load<BlogComment>(id, includeBuilder =>
+                        includeBuilder.IncludeCounter("likes")
+                            .IncludeCounter("dislikes")
+                            .IncludeCounter("total-views"));
+
+                    var all = session.CountersFor(doc).GetAll();
 
                     if (all.Count == 0 || all.Count > 3)
                     {
-                        // we queried docs where Rating > 0
-                        // so each result must have at least one counter on it
+                        // we are only loading docs where Rating > 0
+                        // so each doc must have at least one counter on it
                         // and we only use 3 different counter names in this collection ('likes', 'dislikes', 'total-views')
 
                         ReportFailure($"Failed on document '{doc.Id}'. " +
@@ -94,15 +80,18 @@ namespace Counters
                             null);
                     }
 
-                    if (session.Advanced.NumberOfRequests > numOfRequest)
+                    if (session.Advanced.NumberOfRequests > 1)
                     {
                         ReportFailure($"Failed on document '{doc.Id}'. " +
-                                      "Included counters were not cached in session", null);
+                                      "Included counters were not cached in session. " +
+                                      $"Expected session.Advanced.NumberOfRequests = 1 but got {session.Advanced.NumberOfRequests}",
+                            null);
                     }
                 }
 
-                ReportSuccess("Finished asserting included counters");
             }
+
+            ReportSuccess("Finished asserting included counters");
         }
     }
 }
