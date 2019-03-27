@@ -205,16 +205,16 @@ namespace TestingEnvironment.Orchestrator
             var databaseNames = documentStore.Maintenance.Server.Send(new GetDatabaseNamesOperation(0, int.MaxValue));
             if (truncateExisting && databaseNames.Contains(databaseName))
             {
-                var result = documentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, true));
-                if (result.PendingDeletes.Length > 0)
-                {
-                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                        documentStore.GetRequestExecutor()
-                            .Execute(new WaitForRaftIndexCommand(result.RaftCommandIndex), ctx);
-                }
-
-                var doc = new DatabaseRecord(databaseName);
-                documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, documentStore.Urls.Length));
+//                var result = documentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, true));
+//                if (result.PendingDeletes.Length > 0)
+//                {
+//                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+//                        documentStore.GetRequestExecutor()
+//                            .Execute(new WaitForRaftIndexCommand(result.RaftCommandIndex), ctx);
+//                }
+//
+//                var doc = new DatabaseRecord(databaseName);
+//                documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, documentStore.Urls.Length));
 
             }
             else if (!databaseNames.Contains(databaseName))
