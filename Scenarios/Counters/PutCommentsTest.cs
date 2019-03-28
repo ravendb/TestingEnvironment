@@ -6,47 +6,49 @@ namespace Counters
 {
     public class PutCommentsTest : BaseTest
     {
-        public PutCommentsTest(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
+        public PutCommentsTest(string orchestratorUrl) : base(orchestratorUrl, "PutCommentsTest", "Aviv")
         {
         }
 
         public override void RunActualTest()
         {
-            using (DocumentStore.Initialize())
+            using (var session = DocumentStore.OpenSession())
             {
-                using (var session = DocumentStore.OpenSession())
+                var count = session.Query<BlogComment>().Count();
+                if (count >= 10 * 1024)
                 {
-                    var count = session.Query<BlogComment>().Count();
-                    if (count >= 10 * 1024)
-                    {
-                        ReportInfo("Aborting BlogComment documents insertion, we already have enough docs");
-                        return;
-                    }
+                    ReportInfo("Aborting BlogComment documents insertion, we already have enough docs");
+                    return;
                 }
-
-                ReportInfo("Inserting BlogComment documents");
-
-                var numOfRetries = 3;
-                while (true)
-                {
-                    try
-                    {
-                        PutBlogCommentDocs();
-                    }
-                    catch (Exception e)
-                    {
-                        if (--numOfRetries > 0)
-                            continue;
-
-                        ReportFailure("Failed to store BlogComment documents after 3 tries. Aborting", e);
-                        return;
-                    }
-
-                    break;
-                }
-
-                ReportSuccess("Finished inserting documents");
             }
+
+            ReportInfo("Inserting BlogComment documents");
+
+            var numOfRetries = 3;
+            while (true)
+            {
+                try
+                {
+                    PutBlogCommentDocs();
+                }
+                catch (Exception e)
+                {
+                    if (--numOfRetries > 0)
+                    {
+                        ReportFailure(
+                            "Encounter an error while trying to bulk insert BlogComment documents. Trying again. ", e);
+                        continue;
+                    }
+
+                    ReportFailure("Failed to store BlogComment documents after 3 tries. Aborting", e);
+                    return;
+                }
+
+                break;
+            }
+
+            ReportSuccess("Finished inserting documents");
+
         }
 
         private void PutBlogCommentDocs()
