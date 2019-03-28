@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Isopoh.Cryptography.Argon2;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
@@ -12,13 +13,15 @@ namespace AuthorizationBundle
 {
     public sealed class AuthorizedSession : IDisposable
     {
+        public const string UserPrefix = "users/";
+        public const string GroupPrefix = "groups/";
         private IDocumentSession _session;
 
-        private AuthorizedSession(IDocumentStore store, IDocumentSession session, User user)
+        private AuthorizedSession(IDocumentStore store, IDocumentSession session, AuthorizedUser authorizedUser)
         {
             _store = store;
             _session = session;
-            _user = user;
+            _authorizedUser = authorizedUser;
         }
 
         public static AuthorizedSession OpenSession(IDocumentStore store , string userId, string password)
@@ -27,7 +30,7 @@ namespace AuthorizationBundle
             try
             {
                 session = store.OpenSession();                
-                var user = session.Load<User>(userId);
+                var user = session.Load<AuthorizedUser>(userId);
                 if (user == null)
                     ThrowNoPermissions(userId);
                 //TODO:change to graph query
@@ -52,14 +55,14 @@ namespace AuthorizationBundle
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
-                    var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>("users/" + Root);
-                    if (value.Value != _user.Id)
+                    var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(UserPrefix + Root);
+                    if (value.Value != _authorizedUser.Id)
                     {
-                        throw new UnauthorizedAccessException($"User {_user.Id} is not allowed to create new users");
+                        throw new UnauthorizedAccessException($"AuthorizedUser {_authorizedUser.Id} is not allowed to create new users");
                     }
 
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("users/" + user, 0);
-                    session.Store(new User
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(UserPrefix + user, 0);
+                    session.Store(new AuthorizedUser
                     {
                         Id = user,
                         PasswordHash = ComputeHash(user, password),
@@ -72,12 +75,12 @@ namespace AuthorizationBundle
             {
                 using (OpenSession(_store, user, password))
                 {
-                    //Concurrent creation of the same user
+                    //Concurrent creation of the same authorizedUser
                 }
             }
         }
 
-        //TODO: add method to add user to group
+        //TODO: add method to add authorizedUser to group
         public void AddUserToGroup(string userId, string groupName)
         {
             using (var session = _store.OpenSession(new SessionOptions
@@ -85,18 +88,34 @@ namespace AuthorizationBundle
                 TransactionMode = TransactionMode.ClusterWide
             }))
             {
-                var groupValue = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Group.GroupVersion>("groups/" + groupName);
+                var groupValue = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Group.GroupVersion>(GroupPrefix + groupName);
                 if(groupValue == null)
                 {
-                    throw new InvalidOperationException($"Can't add user {userId} to a none existing group {groupName}, did you forget to generate it?");
+                    Thread.Sleep(15000);
+                    groupValue = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Group.GroupVersion>(GroupPrefix + groupName);
+                    if (groupValue == null)
+                    {
+                        throw new InvalidOperationException($"Can't add authorizedUser {userId} to a none existing group {groupName}, did you forget to generate it?");
+                    }
+                    //problem in cluster tx                    
                 }
-                if (groupValue.Value.Creator != _user.Id)
+                if (groupValue.Value.Creator != _authorizedUser.Id)
                 {
-                    throw new UnauthorizedAccessException($"Only the group creator {_user.Id} may add new members to {groupName} group");
+                    throw new UnauthorizedAccessException($"Only the group creator {_authorizedUser.Id} may add new members to {groupName} group");
                 }
-                var userVersion = session.Advanced.ClusterTransaction.GetCompareExchangeValue<int>("users/" + userId);
+                var userVersion = session.Advanced.ClusterTransaction.GetCompareExchangeValue<int>(UserPrefix + userId);
+                if(userVersion == null)
+                {
+                    Thread.Sleep(15000);
+                    userVersion = session.Advanced.ClusterTransaction.GetCompareExchangeValue<int>(UserPrefix + userId);
+                    if (userVersion == null)
+                    {                        
+                        throw new InvalidOperationException($"AuthorizedUser {userId} does not exist");
+                    }                    
+                    //problem in cluster tx
+                }
                 session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(new CompareExchangeValue<int>(userVersion.Key,userVersion.Index,userVersion.Value+1));
-                var user = session.Load<User>(userId);
+                var user = session.Load<AuthorizedUser>(userId);
                 var group = session.Load<Group>(groupName);                
                 session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(
                     new CompareExchangeValue<Group.GroupVersion>(groupValue.Key, groupValue.Index, 
@@ -114,13 +133,15 @@ namespace AuthorizationBundle
                     session.SaveChanges();
                 }catch(ConcurrencyException ce)
                 {
-                    user = session.Load<User>(userId);
+                    user = session.Load<AuthorizedUser>(userId);
                     group = session.Load<Group>(groupName);
                     if((user?.Groups.Contains(groupName)??false) && (group?.Members.Contains(user.Id)??false))
                     {
-                        //User already added 
+                        //AuthorizedUser already added 
                         return;
                     }
+
+                    throw;
                 }
             }
         }
@@ -131,7 +152,7 @@ namespace AuthorizationBundle
             if (CheckIfUserHasPermissionTo(documentId, collection) == false)
             {
                 throw new UnauthorizedAccessException(
-                    $"User {_user.Id} doesn't have permissions to access document {documentId} in collection {collection}");
+                    $"AuthorizedUser {_authorizedUser.Id} doesn't have permissions to access document {documentId} in collection {collection}");
             }
 
             using (var session = _store.OpenSession(new SessionOptions
@@ -139,10 +160,10 @@ namespace AuthorizationBundle
                 TransactionMode = TransactionMode.ClusterWide
             }))
             {
-                var userVersion = session.Advanced.ClusterTransaction.GetCompareExchangeValue<int>("users/" + userId);
+                var userVersion = session.Advanced.ClusterTransaction.GetCompareExchangeValue<int>(UserPrefix + userId);
                 if(userVersion == null)
-                    throw new InvalidOperationException($"No user named {userId} in the system");
-                var user = session.Load<User>(userId);
+                    throw new InvalidOperationException($"No authorizedUser named {userId} in the system");
+                var user = session.Load<AuthorizedUser>(userId);
                 session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(new CompareExchangeValue<int>(userVersion.Key, userVersion.Index, userVersion.Value+1));
                 if (user.Permissions == null)
                 {
@@ -164,24 +185,24 @@ namespace AuthorizationBundle
         private bool CheckIfUserHasPermissionTo(string documentId, string collection)
         {
             var res = _session.Advanced.GraphQuery<dynamic>("match (dp) or (u)-[Groups]->(ag) or (u)-[Groups]->(Groups as g)-recursive (0, shortest) {[Parent]->(Groups)}-[Parent]->(ag)")
-                .With("u", _session.Query<User>().Where(u => u.Id == _user.Id))
+                .With("u", _session.Query<AuthorizedUser>().Where(u => u.Id == _authorizedUser.Id))
                 .With("dp",
-                    _session.Query<User>().Where(u =>
-                        u.Id == _user.Id && (u.Permissions.Ids.Contains(documentId) ||
+                    _session.Query<AuthorizedUser>().Where(u =>
+                        u.Id == _authorizedUser.Id && (u.Permissions.Ids.Contains(documentId) ||
                                              u.Permissions.Collections.Contains(collection))))
                 .With("ag",
                     _session.Query<Group>().Where(g =>
                         g.Permission.Ids.Contains(documentId) || g.Permission.Collections.Contains(collection)));
             if (res.FirstOrDefault() == null)
             {
-                //check if root user
+                //check if root authorizedUser
                 using (var session = _store.OpenSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
-                    var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>("users/" + Root);
-                    return value.Value == _user.Id;
+                    var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(UserPrefix + Root);
+                    return value.Value == _authorizedUser.Id;
                 }
             }
 
@@ -191,7 +212,7 @@ namespace AuthorizationBundle
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ThrowNoPermissions(string userId)
         {
-            throw new UnauthorizedAccessException($"User {userId} is not a registered user");
+            throw new UnauthorizedAccessException($"AuthorizedUser {userId} is not a registered authorizedUser");
         }
 
         private static bool CheckValidAuthorizedUser(string user, string password, string userHash)
@@ -205,7 +226,7 @@ namespace AuthorizationBundle
             return hash;
         }
 
-        private User _user;
+        private AuthorizedUser _authorizedUser;
         private IDocumentStore _store;
 
         public void Dispose()
@@ -222,9 +243,9 @@ namespace AuthorizationBundle
             {
                 try
                 {
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("users/" + Root, root);
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("users/" + root, 0);
-                    session.Store(new User
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(UserPrefix + Root, root);
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(UserPrefix + root, 0);
+                    session.Store(new AuthorizedUser
                     {
                         Id = root,
                         PasswordHash = ComputeHash(root, password)
@@ -233,10 +254,10 @@ namespace AuthorizationBundle
                 }
                 catch (ConcurrencyException _)
                 {
-                    var rootName = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>("users/" + Root);
+                    var rootName = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(UserPrefix + Root);
                     if (rootName.Value != root)
                     {
-                        throw new UnauthorizedAccessException($"Can't generate root user {root} since there is another root user named {rootName.Value}");
+                        throw new UnauthorizedAccessException($"Can't generate root authorizedUser {root} since there is another root authorizedUser named {rootName.Value}");
                     }
                 }
             }
@@ -251,10 +272,10 @@ namespace AuthorizationBundle
             {
                 try
                 {
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("groups/" + groupName, 
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(GroupPrefix + groupName, 
                         new Group.GroupVersion
                         {
-                            Creator = _user.Id,
+                            Creator = _authorizedUser.Id,
                             Version = 0
                         });
                     session.Store(new Group
@@ -269,8 +290,8 @@ namespace AuthorizationBundle
                 catch (ConcurrencyException _)
                 {
                     //Group was already created 
-                    var creator = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Group.GroupVersion>("groups/" + groupName);
-                    if (creator.Value.Creator != _user.Id)
+                    var creator = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Group.GroupVersion>(GroupPrefix + groupName);
+                    if (creator.Value.Creator != _authorizedUser.Id)
                     {
                         throw new UnauthorizedAccessException($"Can't generate group {groupName} since such a group was already created by {creator.Value.Creator}");
                     }
