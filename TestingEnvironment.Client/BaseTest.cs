@@ -82,8 +82,18 @@ namespace TestingEnvironment.Client
             });
         }
 
-        protected virtual EventResponse ReportEvent(EventInfo eventInfo) => 
-            _orchestratorClient.Post<EventResponse>($"/report?testName={TestName}", eventInfo);
+        protected virtual EventResponse ReportEvent(EventInfo eventInfo)
+        {
+            var eventInfoWithExceptionAsString = new EventInfoWithExceptionAsString
+            {
+                AdditionalInfo = eventInfo.AdditionalInfo,
+                Exception = eventInfo.Exception?.ToString(),
+                Message = eventInfo.Message,
+                Type = (EventInfoWithExceptionAsString.EventType)eventInfo.Type
+            };
+            return _orchestratorClient.Post<EventResponse>($"/report?testName={TestName}", eventInfoWithExceptionAsString);
+        }
+            
 
         public virtual void Dispose()
         {

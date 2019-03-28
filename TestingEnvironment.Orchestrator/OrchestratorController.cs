@@ -29,7 +29,13 @@ namespace TestingEnvironment.Orchestrator
                 return Empty;
             });
 
-            Post("/report", @params => Orchestrator.Instance.ReportEvent(Uri.UnescapeDataString((string) Request.Query.testName), this.Bind<EventInfo>()));
+            // Due to bug in Nancy (cannot serialize Exception), we copy the EventInfo:
+                        
+            Post("/report", @params =>
+            {
+                return Orchestrator.Instance.ReportEvent(Uri.UnescapeDataString((string) Request.Query.testName),
+                        this.Bind<EventInfoWithExceptionAsString>());
+            });
             
             //get latest test by name
             Get<dynamic>("/latest-tests", @params => 
