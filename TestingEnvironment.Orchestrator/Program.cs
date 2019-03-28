@@ -15,7 +15,7 @@ namespace TestingEnvironment.Orchestrator
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             new WebHostBuilder()
                 .UseContentRoot(Directory.GetCurrentDirectory())
-		        .UseUrls(args[0], "http://localhost:5000")
+		        .UseUrls(args[0])
                 .UseKestrel()
                 .UseStartup<Startup>();
     }
