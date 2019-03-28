@@ -49,7 +49,20 @@
             {
                 client.Initialize();
                 client.RunTest();
-            }            
+            }
+
+            using (var client = new IncrementCountersByPatch(orchestratorUrl))
+            {
+                client.Initialize();
+                client.RunTest();
+            }
+
+            using (var client = new SubscribeToCounterChanges(orchestratorUrl))
+            {
+                client.Initialize();
+                client.RunTest();
+            }
+            
         }
     }
 }
