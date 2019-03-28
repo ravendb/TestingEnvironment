@@ -12,6 +12,7 @@
             using (var client = new PutCommentsTest(orchestratorUrl))
             {
                 client.Initialize();
+
                 client.RunTest();
             }
 
@@ -64,6 +65,12 @@
             }
 
             using (var client = new IndexQueryOnCounterNames(orchestratorUrl))
+            {
+                client.Initialize();
+                client.RunTest();
+            }
+
+            using (var client = new CounterRevisions(orchestratorUrl))
             {
                 client.Initialize();
                 client.RunTest();

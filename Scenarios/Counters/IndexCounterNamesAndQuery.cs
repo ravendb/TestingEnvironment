@@ -41,7 +41,7 @@ namespace Counters
 
         #endregion
 
-        public IndexQueryOnCounterNames(string orchestratorUrl) : base(orchestratorUrl, "IndexCounterNamesAndQuery", "Aviv")
+        public IndexQueryOnCounterNames(string orchestratorUrl) : base(orchestratorUrl, "IndexQueryOnCounterNames", "Aviv")
         {
         }
 
@@ -121,7 +121,7 @@ namespace Counters
                         }
                     }
 
-                    ReportSuccess("Finished asserting included counters");
+                    ReportSuccess("Finished asserting valid results");
                 }
             }
             catch (Exception e)
