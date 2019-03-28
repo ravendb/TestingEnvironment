@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
-using System.Text;
+using Isopoh.Cryptography.Argon2;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -87,6 +86,10 @@ namespace AuthorizationBundle
             }))
             {
                 var groupValue = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Group.GroupVersion>("groups/" + groupName);
+                if(groupValue == null)
+                {
+                    throw new InvalidOperationException($"Can't add user {userId} to a none existing group {groupName}, did you forget to generate it?");
+                }
                 if (groupValue.Value.Creator != _user.Id)
                 {
                     throw new UnauthorizedAccessException($"Only the group creator {_user.Id} may add new members to {groupName} group");
@@ -100,13 +103,25 @@ namespace AuthorizationBundle
                         new Group.GroupVersion
                         {
                             Creator = groupValue.Value.Creator,
-                            Version = groupValue .Value.Version
+                            Version = groupValue.Value.Version + 1
                         }));
                 group.Members.Add(userId);
                 session.Store(group);
                 user.Groups.Add(groupName);
                 session.Store(user);
-                session.SaveChanges();
+                try
+                {
+                    session.SaveChanges();
+                }catch(ConcurrencyException ce)
+                {
+                    user = session.Load<User>(userId);
+                    group = session.Load<Group>(groupName);
+                    if((user?.Groups.Contains(groupName)??false) && (group?.Members.Contains(user.Id)??false))
+                    {
+                        //User already added 
+                        return;
+                    }
+                }
             }
         }
 
@@ -181,18 +196,12 @@ namespace AuthorizationBundle
 
         private static bool CheckValidAuthorizedUser(string user, string password, string userHash)
         {
-            return userHash == ComputeHash(user, password);
+            return Argon2.Verify(userHash, user + password);
         }
 
         private static string ComputeHash(string user, string password)
         {
-            var sha = SHA256.Create();
-            var userBuffer = Encoding.UTF8.GetBytes(user);
-            var passwordBuffer = Encoding.UTF8.GetBytes(password);
-            var buffer = new byte[userBuffer.Length + passwordBuffer.Length];
-            Buffer.BlockCopy(userBuffer, 0, buffer, 0, user.Length);
-            Buffer.BlockCopy(passwordBuffer, 0, buffer, user.Length, passwordBuffer.Length);
-            var hash = Convert.ToBase64String(sha.ComputeHash(buffer));
+            var hash = Argon2.Hash(user + password);
             return hash;
         }
 
