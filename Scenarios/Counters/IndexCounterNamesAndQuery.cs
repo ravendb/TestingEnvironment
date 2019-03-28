@@ -64,27 +64,31 @@ namespace Counters
                 {
                     ReportInfo("Started querying index 'BlogCommentsIndex' and projecting counters");
 
-                    var result = session.Query<BlogCommentsIndex.Result, BlogCommentsIndex>()
-                        .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30)))
+                    var query = session.Query<BlogCommentsIndex.Result, BlogCommentsIndex>()
                         .Where(comment => comment.Rating > 0 && comment.CounterNames.Contains("likes"))
                         .Select(x => new
                         {
                             Id = x.Id,
                             CounterNames = x.CounterNames,
                             Likes = session.CountersFor(x).Get("likes")
-                        })
-                        .ToList();
+                        });
 
-                    if (result.Count == 0)
+                    var count = query.Count();
+
+                    if (count == 0)
                     {
                         ReportInfo("No matching results. Aborting");
                         return;
                     }
 
-                    ReportInfo($"Found {result.Count} matching results. Asserting valid results. ");
+                    ReportInfo($"Found {count} matching results. Asserting valid results. ");
 
-                    foreach (var doc in result)
+                    var stream = session.Advanced.Stream(query);
+
+                    while (stream.MoveNext())
                     {
+                        var doc = stream.Current.Document;
+
                         if (doc.Likes == null)
                         {
                             // we queried for docs that have 'likes' in counter names
