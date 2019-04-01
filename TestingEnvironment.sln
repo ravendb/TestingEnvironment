@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scenarios", "Scenarios", "{
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Counters", "Scenarios\Counters\Counters.csproj", "{C8E517D0-AEE9-439C-BA9D-76953087F49D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AuthorizationBundle", "Scenarios\AuthorizationBundle\AuthorizationBundle.csproj", "{B2336529-B5F0-40E7-B8F6-1F52089C1785}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,12 +43,17 @@ Global
 		{C8E517D0-AEE9-439C-BA9D-76953087F49D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C8E517D0-AEE9-439C-BA9D-76953087F49D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C8E517D0-AEE9-439C-BA9D-76953087F49D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2336529-B5F0-40E7-B8F6-1F52089C1785}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2336529-B5F0-40E7-B8F6-1F52089C1785}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2336529-B5F0-40E7-B8F6-1F52089C1785}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2336529-B5F0-40E7-B8F6-1F52089C1785}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C8E517D0-AEE9-439C-BA9D-76953087F49D} = {28FA38AF-A144-476F-B6D1-79A7532ED2CC}
+		{B2336529-B5F0-40E7-B8F6-1F52089C1785} = {28FA38AF-A144-476F-B6D1-79A7532ED2CC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D8EB129C-81E9-4C3D-A4A3-DA9092D30CDE}
