@@ -150,7 +150,7 @@ namespace TestingEnvironment.Orchestrator
                     TestClassName = testClassName,
                     Author = author,
                     Start = now,
-                    Events = new List<EventInfo>(),
+                    Events = new List<EventInfoWithExceptionAsString>(),
                     Config = testConfig //record what servers we are working with in this particular test
                 });
                 session.SaveChanges();
@@ -182,7 +182,7 @@ namespace TestingEnvironment.Orchestrator
             }
         }
 
-        public EventResponse ReportEvent(string testName, EventInfo @event)
+        public EventResponse ReportEvent(string testName, EventInfoWithExceptionAsString @event)
         {
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
