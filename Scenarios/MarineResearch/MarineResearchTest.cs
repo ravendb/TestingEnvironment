@@ -48,8 +48,55 @@ namespace MarineResearch
             var actual = ToList(csvStream);
 
             var groupBy = GroupByTime(expected);
-            if (groupBy.SequenceEqual(actual))
-                ReportSuccess("Results were received as expected");
+
+            var result = CheckResult(groupBy, expected);
+            if (result.Any())
+                ReportFailure("Results were _not_ received as expected", null, result);
+
+            ReportSuccess("Results were received as expected");
+        }
+
+        private Dictionary<string, string> CheckResult(IEnumerable<Measurement> actual, IEnumerable<Measurement> expected)
+        {
+            var actualArray = actual.ToArray();
+            var expectedArray = expected.ToArray();
+            var result = new Dictionary<string, string>();
+
+            var result1 = GetUnacceptedResultsIndexes(actualArray, expectedArray);
+            if (string.IsNullOrEmpty(result1))
+                result.Add("Unaccepted Results Indexes", result1);
+
+            var result2 = GetUnexpectedResults(actualArray, expectedArray);
+            if (string.IsNullOrEmpty(result2))
+                result.Add("Unexpected Results", result1);
+
+            return result;
+        }
+
+        private static string GetUnexpectedResults(Measurement[] actual, Measurement[] expected)
+        {
+            var result = "[";
+            for (var i = 0; i < actual.Length; i++)
+            {
+                if (expected.Any(m1 => m1.Equals(actual[i])) == false)
+                    result += $"{{index:{i},  measurement:{actual[i]}}},";
+            }
+            result += ']';
+
+            return result == "[]" ? null : result;
+        }
+
+        private static string GetUnacceptedResultsIndexes(Measurement[] actual, Measurement[] expected)
+        {
+            var result = "";
+
+            for (var i = 0; i < expected.Length; i++)
+            {
+                if (actual.Any(m1 => m1.Equals(expected[i])) == false)
+                    result += $"{i},";
+            }
+
+            return result;
         }
 
         private static Measurement[] GroupByTime(IEnumerable<Measurement> expected)
