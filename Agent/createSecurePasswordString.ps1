@@ -1,0 +1,1 @@
+read-host -assecurestring | convertfrom-securestring | out-file securestring.txt
