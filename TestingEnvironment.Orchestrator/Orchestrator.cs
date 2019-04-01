@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -68,8 +69,8 @@ namespace TestingEnvironment.Orchestrator
             
             EmbeddedServer.Instance.StartServer(new ServerOptions
             {  
-                ServerUrl = "http://0.0.0.0:8090",
-                CommandLineArgs = new List<string> { " --Security.UnsecuredAccessAllowed=PublicNetwork ", " --Setup.Mode=None ", " --PublicServerUrl=http://10.0.0.69:8090 "}
+                ServerUrl = "http://0.0.0.0:8091",
+                CommandLineArgs = new List<string> { " --Security.UnsecuredAccessAllowed=PublicNetwork ", " --Setup.Mode=None ", " --PublicServerUrl=http://10.0.0.69:8091 "}
             });
             _reportingDocumentStore = EmbeddedServer.Instance.GetDocumentStore(new DatabaseOptions(OrchestratorDatabaseName));
             _reportingDocumentStore.Initialize();
@@ -150,7 +151,7 @@ namespace TestingEnvironment.Orchestrator
                     TestClassName = testClassName,
                     Author = author,
                     Start = now,
-                    Events = new List<EventInfo>(),
+                    Events = new List<EventInfoWithExceptionAsString>(),
                     Config = testConfig //record what servers we are working with in this particular test
                 });
                 session.SaveChanges();
@@ -182,14 +183,15 @@ namespace TestingEnvironment.Orchestrator
             }
         }
 
-        public EventResponse ReportEvent(string testName, EventInfo @event)
+        public EventResponse ReportEvent(string testName, EventInfoWithExceptionAsString @eventWithExceptionAsString)
         {
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
                 var latestTest = session.Query<TestInfo>().OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName);
                 if (latestTest != null)
                 {
-                    latestTest.Events.Add(@event);
+                    eventWithExceptionAsString.EventTime = DateTime.UtcNow.ToString(CultureInfo.InvariantCulture);
+                    latestTest.Events.Add(@eventWithExceptionAsString);
                     session.SaveChanges();
                 }
 
