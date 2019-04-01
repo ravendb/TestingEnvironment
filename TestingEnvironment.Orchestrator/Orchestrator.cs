@@ -68,7 +68,8 @@ namespace TestingEnvironment.Orchestrator
             
             EmbeddedServer.Instance.StartServer(new ServerOptions
             {  
-                ServerUrl = "http://127.0.0.1:8090"
+                ServerUrl = "http://0.0.0.0:8090",
+                CommandLineArgs = new List<string> { " --Security.UnsecuredAccessAllowed=PublicNetwork ", " --Setup.Mode=None ", " --PublicServerUrl=http://10.0.0.69:8090 "}
             });
             _reportingDocumentStore = EmbeddedServer.Instance.GetDocumentStore(new DatabaseOptions(OrchestratorDatabaseName));
             _reportingDocumentStore.Initialize();
