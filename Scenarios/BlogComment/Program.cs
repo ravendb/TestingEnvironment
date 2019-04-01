@@ -99,7 +99,7 @@ namespace BlogComment
                     {
                         var rnd = new Random();
 
-                        var randTag = ((CommentTag) rnd.Next(0, 9)).ToString();
+                        var randTag = ((CommentTag)rnd.Next(0, 9)).ToString();
 
                         var randYearOffset = rnd.Next(0, 4);
                         var randMonthOffset = rnd.Next(0, 11);

@@ -13,3 +13,9 @@ TestingEnvironment/obj
 /TestingEnvironment.Orchestrator/obj
 /Tryouts/bin/Debug/netcoreapp2.2
 /Tryouts/obj
+*.suo
+*.user
+_ReSharper.*
+bin
+obj
+packages

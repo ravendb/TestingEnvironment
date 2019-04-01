@@ -67,9 +67,10 @@ namespace TestingEnvironment.Orchestrator
             }
             
             EmbeddedServer.Instance.StartServer(new ServerOptions
-{  
-    ServerUrl = "http://127.0.0.1:8090"
-});
+            {  
+                ServerUrl = "http://0.0.0.0:8090",
+                CommandLineArgs = new List<string> { " --Security.UnsecuredAccessAllowed=PublicNetwork ", " --Setup.Mode=None ", " --PublicServerUrl=http://10.0.0.69:8090 "}
+            });
             _reportingDocumentStore = EmbeddedServer.Instance.GetDocumentStore(new DatabaseOptions(OrchestratorDatabaseName));
             _reportingDocumentStore.Initialize();
             new LatestTestByName().Execute(_reportingDocumentStore);
@@ -205,16 +206,16 @@ namespace TestingEnvironment.Orchestrator
             var databaseNames = documentStore.Maintenance.Server.Send(new GetDatabaseNamesOperation(0, int.MaxValue));
             if (truncateExisting && databaseNames.Contains(databaseName))
             {
-                var result = documentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, true));
-                if (result.PendingDeletes.Length > 0)
-                {
-                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                        documentStore.GetRequestExecutor()
-                            .Execute(new WaitForRaftIndexCommand(result.RaftCommandIndex), ctx);
-                }
-
-                var doc = new DatabaseRecord(databaseName);
-                documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, documentStore.Urls.Length));
+//                var result = documentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, true));
+//                if (result.PendingDeletes.Length > 0)
+//                {
+//                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+//                        documentStore.GetRequestExecutor()
+//                            .Execute(new WaitForRaftIndexCommand(result.RaftCommandIndex), ctx);
+//                }
+//
+//                var doc = new DatabaseRecord(databaseName);
+//                documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, documentStore.Urls.Length));
 
             }
             else if (!databaseNames.Contains(databaseName))

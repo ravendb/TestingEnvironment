@@ -14,6 +14,7 @@ namespace TestingEnvironment.Client
         private readonly string _author;
 
         protected IDocumentStore DocumentStore;
+        protected Random Random = new Random(123);
 
         private readonly JsonServiceClient _orchestratorClient;
 
