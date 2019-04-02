@@ -18,7 +18,8 @@ namespace AuthorizationBundle
         public override void RunActualTest()
         {
             using (DocumentStore)
-            {
+            {            
+                //ForclyCleanUsers();
                 ReportInfo("Creating root user");
                 _rootUser = GenerateRandomUser();
                 AuthorizedSession.CreateRootUser(DocumentStore, _rootUser.Id, _rootUser.Password);
@@ -44,18 +45,51 @@ namespace AuthorizationBundle
             }
         }
 
+        private void ForclyCleanUsers()
+        {
+            using (var session =
+                DocumentStore.OpenSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+            {
+                var root =
+                    session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(AuthorizedSession.UserPrefix + "rootuser");
+                if (root != null)
+                {
+                    session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(root.Key, root.Index);
+                }
+
+                for (var i = 0; i < 4000; i++)
+                {
+                    try
+                    {
+                        var val =
+                            session.Advanced.ClusterTransaction.GetCompareExchangeValue<int>(AuthorizedSession.UserPrefix + "authorizeduser/" + i);
+                        if (val != null)
+                        {
+                            session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(val.Key, val.Index);
+                        }
+                    }
+                    catch
+                    {
+                        //don't care
+                    }
+                }
+
+                session.SaveChanges();
+            }
+        }
+
         private void CleanupTestsEntities()
         {
             using (var session =
                 DocumentStore.OpenSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
             {
-                var rootUserValue = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>("users/RootUser");
+                var rootUserValue = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(AuthorizedSession.UserPrefix + "RootUser");
                 session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(rootUserValue.Key, rootUserValue.Index);
 
                 foreach (var group in AllGroups)
                 {
                     var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Group.GroupVersion>(
-                        "groups/" + group.Id);
+                        AuthorizedSession.GroupPrefix + group.Id);
                     if (value != null)
                     {
                         session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(value.Key, value.Index);
@@ -66,7 +100,7 @@ namespace AuthorizationBundle
                 foreach (var user in AllUsers)
                 {
                     var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<int>(
-                        "users/" + user.Id);
+                        AuthorizedSession.UserPrefix + user.Id);
                     if (value != null)
                     {
                         session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(value.Key, value.Index);
@@ -152,7 +186,7 @@ namespace AuthorizationBundle
         private int UserCount { get; set; }
         private TestUser GenerateRandomUser()
         {
-            var userName = "User/" + UserCount++;
+            var userName = "AuthorizedUser/" + UserCount++;
             var user = new TestUser{Id = userName, Password = GenerateRandomPassword(userName),Groups = new HashSet<string>(),Permissions = new Permission()};
             AllUsers.Add(user);
             return user;
