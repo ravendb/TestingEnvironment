@@ -10,96 +10,33 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Patching;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using TestingEnvironment.Client;
 using TestingEnvironment.Common;
 
 namespace CorruptedCasino
 {
-    public class Casino : BaseTest
+    public class CasinoTest : BaseTest
     {
-        public static readonly Casino Instance;
-
-        private static bool Local = false;
-
-        static Casino()
+        public CasinoTest(string orchestratorUrl) : base(orchestratorUrl, "CorruptedCasinoTest", "Karmel")
         {
-            var url = Local ? "http://localhost:8080" : "http://10.0.0.69:8090";
-            Instance = new Casino(url, "CorruptedCasino", "Karmel");
-            Instance.Initialize();
-            Name = Store.Database;
-        }
-
-        private Casino(string orchestratorUrl, string testName, string author) : base(orchestratorUrl, testName, author)
-        {
-        }
-
-        public override void Initialize()
-        {
-            if (Local == false)
-            {
-                base.Initialize();
-                return;
-            }
-
-            Store = new DocumentStore
-            {
-                Urls = new[] { "http://localhost:8080" },
-                Database = "Game"
-            };
-            Store.Initialize();
-        }
-
-        public static IDocumentStore Store;
-
-        public static readonly string Name;
-
-        public static IAsyncDocumentSession GetClusterSessionAsync => Store.OpenAsyncSession(new SessionOptions
-        {
-            TransactionMode = TransactionMode.ClusterWide
-        });
-
-        public static IAsyncDocumentSession GetSessionAsync => Store.OpenAsyncSession();
-
-        public static async Task Bootstrap()
-        {
-            if (Local)
-            {
-                try
-                {
-                    Store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(Name)));
-                }
-                catch
-                {
-                    // ignore
-                }
-            }
-
             try
             {
-                new BetsIndex().Execute(Store);
+                new BetsIndex().Execute(DocumentStore);
             }
             catch
             {
                 // ignore
             }
 
-            await ConfigureExpiration();
-            await ConfigureRevisions();
-        }
-
-        private static async Task ConfigureExpiration()
-        {
-            await Store.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration
+            // ConfigureExpiration
+            var configureExpirationOperationResult = DocumentStore.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration
             {
                 Disabled = false,
                 DeleteFrequencyInSec = 600
-            }));
-        }
+            })).Result;
 
-        private static async Task ConfigureRevisions()
-        {
+            // ConfigureRevisions
             var config = new RevisionsConfiguration
             {
                 Collections = new Dictionary<string, RevisionsCollectionConfiguration>
@@ -113,8 +50,17 @@ namespace CorruptedCasino
                 }
             };
 
-            await Store.Maintenance.SendAsync(new ConfigureRevisionsOperation(config));
+            var configureRevisionsOperationResult = DocumentStore.Maintenance.SendAsync(new ConfigureRevisionsOperation(config)).Result;
         }
+
+        public IAsyncDocumentSession GetClusterSessionAsync => DocumentStore.OpenAsyncSession(new SessionOptions
+        {
+            TransactionMode = TransactionMode.ClusterWide
+        });
+
+        public IDocumentStore GetDocumentStore => DocumentStore;
+
+        public IAsyncDocumentSession GetSessionAsync => DocumentStore.OpenAsyncSession();
 
         public class BetsIndex : AbstractIndexCreationTask<Bet, BetsIndex.BetsResult>
         {
@@ -154,7 +100,7 @@ namespace CorruptedCasino
             }
         }
 
-        public static int[] RandomSequence()
+        public int[] RandomSequence()
         {
             var result = new int[Lottery.NumberSize];
             for (int i = 0; i < Lottery.NumberSize; i++)
@@ -171,7 +117,7 @@ namespace CorruptedCasino
             return result.OrderBy(x=>x).ToArray();
         }
 
-        public static Task StartPlacingBets(Lottery lottery, int num)
+        public Task StartPlacingBets(Lottery lottery, int num)
         {
             var tasks = new List<Task>();
             for (int i = 0; i < num; i++)
@@ -182,11 +128,11 @@ namespace CorruptedCasino
                     {
                         await Task.Delay(Lottery.Rand.Next(500, 1000));
                         var name = UserOperations.GetName();
-                        var user = await UserOperations.RegisterOrLoad($"{name}@karmel.com", name);
+                        var user = await UserOperations.RegisterOrLoad(this,$"{name}@karmel.com", name);
                         for (int j = 0; j < 10; j++)
                         {
                             await Task.Delay(Lottery.Rand.Next(500, 1000));
-                            await user.PlaceBet(lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10));
+                            await user.PlaceBet(this, lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10));
                         }
                     }
                     catch (ConcurrencyException)
@@ -214,7 +160,7 @@ namespace CorruptedCasino
             return Task.WhenAll(tasks);
         }
 
-        public static void ChangeBets(Lottery lottery, int num)
+        public void ChangeBets(Lottery lottery, int num)
         {
             for (int i = 0; i < num; i++)
             {
@@ -222,28 +168,28 @@ namespace CorruptedCasino
                 {
                     await Task.Delay(Lottery.Rand.Next(100, 1000));
                     var name = UserOperations.GetName();
-                    var user = await UserOperations.RegisterOrLoad($"{name}@karmel.com", name);
+                    var user = await UserOperations.RegisterOrLoad(lottery.CasinoTestInstance,$"{name}@karmel.com", name);
                     while (true)
                     {
                         await Task.Delay(Lottery.Rand.Next(100, 500));
-                        await user.PlaceBet(lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10));
+                        await user.PlaceBet(lottery.CasinoTestInstance, lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10));
                     }
                 });
             }
         }
 
-        public static int ReplicaCount()
+        public int ReplicaCount()
         {
-            return Store.Maintenance.Server.Send(new GetDatabaseRecordOperation(Store.Database)).Topology.Count - 1;
+            return DocumentStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(DocumentStore.Database)).Topology.Count - 1;
         }
 
-        public static async Task CreateAndRunLottery()
+        public async Task CreateAndRunLottery()
         {
             var policy = Policy.Handle<TimeoutException>().Retry(5);
             Console.Write("Creating Lottery ... ");
-            var lottery = await Lottery.CreateLottery();
+            var lottery = await Lottery.CreateLottery(this);
 
-            Instance.ReportEvent(new EventInfo
+            ReportEvent(new EventInfo
             {
                 Message = $"Lottery {lottery.Id} was created and will overdue at {lottery.DueTime}",
                 Type = EventInfo.EventType.Info
@@ -252,7 +198,7 @@ namespace CorruptedCasino
 
             Console.WriteLine("Start betting");
             var t = StartPlacingBets(lottery, 1000);
-            Instance.ReportEvent(new EventInfo
+            ReportEvent(new EventInfo
             {
                 Message = $"Start betting in lottery {lottery.Id}",
                 Type = EventInfo.EventType.Info
@@ -261,7 +207,7 @@ namespace CorruptedCasino
             if (sleep > 10)
                 await Task.Delay(sleep);
 
-            Instance.ReportEvent(new EventInfo
+            ReportEvent(new EventInfo
             {
                 Message = $"Lottery {lottery.Id} is overdue",
                 Type = EventInfo.EventType.Info
@@ -271,7 +217,7 @@ namespace CorruptedCasino
             await policy.Execute(lottery.FinalizeBets);
             Console.WriteLine("Done");
 
-            Instance.ReportEvent(new EventInfo
+            ReportEvent(new EventInfo
             {
                 Message = $"Rolling the dice for lottery {lottery.Id}",
                 Type = EventInfo.EventType.Info
@@ -281,7 +227,7 @@ namespace CorruptedCasino
             Console.Write("Completing the lottery ... ");
 
             await policy.Execute(lottery.Complete);
-            Instance.ReportEvent(new EventInfo
+            ReportEvent(new EventInfo
             {
                 Message = $"Lottery {lottery.Id} is completed",
                 Type = EventInfo.EventType.Info
@@ -289,7 +235,7 @@ namespace CorruptedCasino
             Console.WriteLine("Done");
 
             var profit = await policy.Execute(lottery.GetFinalBettingReport);
-            Instance.ReportEvent(new EventInfo
+            ReportEvent(new EventInfo
             {
                 Message = $"Report for lottery {lottery.Id} was generated and winners were rewarded.",
                 Type = EventInfo.EventType.TestSuccess
@@ -298,8 +244,6 @@ namespace CorruptedCasino
 
             await t;
         }
-
-        protected override EventResponse ReportEvent(EventInfo eventInfo) => Local ? new EventResponse() : base.ReportEvent(eventInfo);
 
         public override void RunActualTest()
         {
