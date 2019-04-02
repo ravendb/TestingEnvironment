@@ -2,7 +2,7 @@
 
 namespace AuthorizationBundle
 {
-    public class User
+    public class AuthorizedUser
     {
         public string PasswordHash { get; set; }
         public HashSet<string> Groups { get; set; } 
