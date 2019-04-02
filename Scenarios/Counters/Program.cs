@@ -12,7 +12,6 @@
             using (var client = new PutCommentsTest(orchestratorUrl))
             {
                 client.Initialize();
-
                 client.RunTest();
             }
 
