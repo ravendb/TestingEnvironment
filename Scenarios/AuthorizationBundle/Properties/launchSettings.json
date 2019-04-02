@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "AuthorizationBundle": {
-      "commandName": "Project",
-      "commandLineArgs": "http://10.0.0.69:8080"
-    }
-  }
-}

@@ -13,4 +13,8 @@
     <ProjectReference Include="..\..\TestingEnvironment.Client\TestingEnvironment.Client.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
 </Project>
