@@ -38,7 +38,7 @@ Write-Host "[TE] Changing directory to ${prefix}\${ravendbdir}\Server..."
 cd "${prefix}\${ravendbdir}\Server"
 Write-Host "[TE] Setting firewall ALLOW rule for Raven.Server.exe..."
 Remove-NetFirewallRule -DisplayName TestingEnvironment -ErrorAction Ignore
-New-NetFirewallRule -DisplayName TestingEnvironment -Program "${prefix}\${scenariodir}\Raven.Server.exe"
+New-NetFirewallRule -DisplayName TestingEnvironment -Program "${prefix}\${ravendbdir}\Server\Raven.Server.exe"
 Write-Host "[TE] Executing RavenDB..."
 Write-Host ".\Raven.Server.exe --PublicServerUrl=http://${hostip}:${hostport} --ServerUrl=http://${hostip}:${hostport} -Security.UnsecuredAccessAllowed=PublicNetwork --Setup.Mode=None"
 

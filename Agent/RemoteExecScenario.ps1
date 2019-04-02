@@ -25,7 +25,7 @@ function Unzip
     [System.IO.Compression.ZipFile]::ExtractToDirectory($zipfile, $outpath)
 }
 
-<#
+
 Write-Host "[TE] Creating directory ${prefix}..."
 New-Item -ItemType Directory -Force -Path ${prefix}
 Write-Host "[TE] Deleting directory ${prefix}\${scenariodir}..."
@@ -36,12 +36,11 @@ Write-Host "[TE] Downloading http://${remoteip}:${remoteport}/${downloadfile}...
 wget "http://${remoteip}:${remoteport}/${downloadfile}" -UseBasicParsing -OutFile "${prefix}\${scenario}.zip"
 Write-Host "[TE] Unzipping ${prefix}\${scenario}.zip..."
 Unzip "${prefix}\${scenario}.zip" "${prefix}\${scenariodir}\"
-#>
 Write-Host "[TE] Changing directory to ${prefix}\${scenariodir}\"
 cd "${prefix}\${scenariodir}\${scenario}\"
 Write-Host "[TE] Setting firewall ALLOW rule for ${scenario}.exe..."
-Remove-NetFirewallRule -DisplayName TestingEnvironment -ErrorAction Ignore
-New-NetFirewallRule -DisplayName TestingEnvironment -Program "${prefix}\${scenariodir}\${scenario}.exe"
+Remove-NetFirewallRule -DisplayName TestingEnvironment_${scenario} -ErrorAction Ignore
+New-NetFirewallRule -DisplayName TestingEnvironment_${scenario} -Program "${prefix}\${scenariodir}\${scenario}\${scenario}.exe"
 Write-Host "[TE] Executing ${scenario}..."
 Write-Host "${scenario}.exe ${ochestratorurl}"
 $cmd="& .\${scenario}.exe ${ochestratorurl}"
