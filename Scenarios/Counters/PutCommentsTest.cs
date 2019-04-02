@@ -55,7 +55,7 @@ namespace Counters
         {
             using (var bulk = DocumentStore.BulkInsert())
             {
-                // bulk insert 1000 BlogComment docs
+                // bulk insert 1024 BlogComment docs
 
                 for (int i = 0; i < 1024; i++)
                 {
