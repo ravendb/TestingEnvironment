@@ -1,10 +1,7 @@
-param( $remoteip, $remoteport, $hostip, $hostport, $hostuser, $domain )
-
-$downloadfile="RavenDB-4.2.0-custom-42-windows-x64.zip"
+param( $remoteip, $remoteport, $hostip, $hostport, $hostuser, $domain, $downloadfile )
 
 $username="${domain}\${hostuser}"
-$hostuser="${hostuser}"
-$password=Get-Content 'securestring.txt' | ConvertTo-SecureString
+$password=Get-Content "securestring_${hostuser}.txt" | ConvertTo-SecureString
 $cred=new-object -typename System.Management.Automation.PSCredential -argumentlist $username, $password
 
 Set-Item WSMan:\localhost\Client\TrustedHosts -Force -Confirm:$false -Value "${hostip}"

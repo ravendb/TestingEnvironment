@@ -16,6 +16,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Agent", "Agent", "{2EF65611-C518-4E94-BC73-4AC47AFD83BC}"
 	ProjectSection(SolutionItems) = preProject
 		Agent\createSecurePasswordString.ps1 = Agent\createSecurePasswordString.ps1
+		Agent\LaunchRandomTests.ps1 = Agent\LaunchRandomTests.ps1
 		Agent\LaunchRemoteRavenCommand.ps1 = Agent\LaunchRemoteRavenCommand.ps1
 		Agent\LaunchRemoteScenarioCommand.ps1 = Agent\LaunchRemoteScenarioCommand.ps1
 		Agent\README.txt = Agent\README.txt

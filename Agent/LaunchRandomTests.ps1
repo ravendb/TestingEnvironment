@@ -1,5 +1,7 @@
 param ( $remoteip, $hostip, $hostuser, $hostdomain, $ochestratorurl )
 
+$scenarioport=11802
+
 function LaunchScenario
 {
   param ( $scenarioname, $port )
@@ -14,17 +16,30 @@ DO
 {
   Write-Host "Starting Loop $a"
   
-  $rnd = Get-Random -Minimum 1 -Maximum 30
+  $rnd = Get-Random -Minimum 1 -Maximum 100
 
-  If ( $rnd -eq 2 ) {
+  $p1=1
+  $p2=20+$p1
+  $p3=1+$p2
+  $p4=5+$p3
+  $p5=20+$p4
+  $p6=10+$p5
+  <# $p7 -> the rest : 43 #>
+
+  If ( $rnd -eq $p1 ) {
 	$scenario="AuthorizationBundle"
-	$scenarioport=11804
-  } ElseIf ( $rnd -lt 15 ) {
-	$scenario="BlogComment"
-	$scenarioport=11802
-  } Else {
+  } ElseIf ( $rnd -lt $p2 ) {
 	$scenario="Counters"
-	$scenarioport=11803
+  } ElseIf ( $rnd -lt $p3 ) {
+	$scenario="BackupAndRestore"
+  } ElseIf ( $rnd -lt $p4 ) {
+	$scenario="CorruptedCasino"
+  } ElseIf ( $rnd -lt $p5 ) {
+	$scenario="MarineResearch"
+  } ElseIf ( $rnd -lt $p6 ) {
+	$scenario="Subscriptions"
+  } Else {
+	$scenario="BlogComment"
   }
 
  Write-Host "Launching ${scenario}"

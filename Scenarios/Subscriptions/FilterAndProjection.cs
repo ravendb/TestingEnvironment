@@ -283,12 +283,9 @@ namespace Subscriptions
                 }
                 
             }, ct.Token);
-            while (sum < 2500)
-            {
-                Console.WriteLine(sum);
 
-            }
-
+            SpinWait.SpinUntil(() => sum >= 2500);
+            
             ReportInfo("Done collecting info");
             if (_shipper[i] == count)
                 ReportSuccess($"shipper {i} - success");
