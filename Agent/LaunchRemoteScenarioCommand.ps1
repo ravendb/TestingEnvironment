@@ -1,4 +1,4 @@
-param( $remoteip, $remoteport, $hostip, $hostuser, $domain, $scenario, $ochestratorip )
+param( $remoteip, $remoteport, $hostip, $hostuser, $domain, $scenario, $orchestratorip )
 
 $downloadfile="${scenario}.zip"
 
@@ -7,7 +7,7 @@ $hostuser="${hostuser}"
 $password=Get-Content "securestring_${hostuser}.txt" | ConvertTo-SecureString
 $cred=new-object -typename System.Management.Automation.PSCredential -argumentlist $username, $password
 
-Write-Host Launching with args: "${remoteip}", "${remoteport}", "${hostuser}", "${hostip}", "${hostport}", "${scenario}", "${ochestratorip}"
+Write-Host Launching with args: "${remoteip}", "${remoteport}", "${hostuser}", "${hostip}", "${hostport}", "${scenario}", "${orchestratorip}"
 
 Set-Item WSMan:\localhost\Client\TrustedHosts -Force -Confirm:$false -Value "${hostip}"
-Invoke-Command -ComputerName "${hostip}" -FilePath RemoteExecScenario.ps1 -ArgumentList ( "${remoteip}", "${remoteport}", "${hostuser}", "${hostip}", "${hostport}", "${scenario}", "${ochestratorip}" )  -Credential ${cred}
+Invoke-Command -ComputerName "${hostip}" -FilePath RemoteExecScenario.ps1 -ArgumentList ( "${remoteip}", "${remoteport}", "${hostuser}", "${hostip}", "${hostport}", "${scenario}", "${orchestratorip}" )  -Credential ${cred}

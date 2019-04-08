@@ -1,4 +1,4 @@
-﻿param($remoteip, $remoteport, $hostuser, $hostip, $hostport, $scenario, $ochestratorurl)
+﻿param($remoteip, $remoteport, $hostuser, $hostip, $hostport, $scenario, $orchestratorurl)
 Write-Host ""
 Write-Host "###############"
 Write-Host "# TE Scenario #"
@@ -42,8 +42,8 @@ Write-Host "[TE] Setting firewall ALLOW rule for ${scenario}.exe..."
 Remove-NetFirewallRule -DisplayName TestingEnvironment_${scenario} -ErrorAction Ignore
 New-NetFirewallRule -DisplayName TestingEnvironment_${scenario} -Program "${prefix}\${scenariodir}\${scenario}\${scenario}.exe"
 Write-Host "[TE] Executing ${scenario}..."
-Write-Host "${scenario}.exe ${ochestratorurl}"
-$cmd="& .\${scenario}.exe ${ochestratorurl}"
+Write-Host "${scenario}.exe ${orchestratorurl}"
+$cmd="& .\${scenario}.exe ${orchestratorurl}"
 Invoke-Expression $cmd
 
 Write-Host "[TE] Exiting Script !!"

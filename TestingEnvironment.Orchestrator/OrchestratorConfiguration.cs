@@ -50,7 +50,7 @@
 
     public class OrchestratorConfiguration
     {
-        public string OchestratorUrl { get; set; }
+        public string OrchestratorUrl { get; set; }
         public string[] Databases { get; set; }
         public ServerInfo[] LocalRavenServers { get; set; }
         public ClusterInfo[] Clusters { get; set; }

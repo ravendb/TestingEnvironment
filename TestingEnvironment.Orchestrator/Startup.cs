@@ -15,7 +15,7 @@ namespace TestingEnvironment.Orchestrator
                 .AddJsonFile("appsettings.json", optional:false, reloadOnChange:true)
                 .SetBasePath(env.ContentRootPath);
 
-            config = builder.Build();
+            config = builder.Build();            
         }
         
         public void Configure(IApplicationBuilder app)

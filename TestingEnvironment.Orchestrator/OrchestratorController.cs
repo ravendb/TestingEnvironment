@@ -41,6 +41,10 @@ namespace TestingEnvironment.Orchestrator
             Get<dynamic>("/latest-tests", @params => 
                 Response.AsJson(Orchestrator.Instance.GetLastTestByName(Uri.UnescapeDataString((string) Request.Query.testName))));
 
+            //non success tests
+            Get<dynamic>("/failing-tests", @params =>
+                Response.AsJson(Orchestrator.Instance.GetFailingTests()));
+
             Get<dynamic>("/config-selectors",_ =>
                 Response.AsJson(Orchestrator.Instance.ConfigSelectorStrategies.Select(x => new
                 {

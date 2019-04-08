@@ -68,12 +68,13 @@ namespace TestingEnvironment.Orchestrator
             
             EmbeddedServer.Instance.StartServer(new ServerOptions
             {  
-                ServerUrl = "http://0.0.0.0:8090",
-                CommandLineArgs = new List<string> { " --Security.UnsecuredAccessAllowed=PublicNetwork ", " --Setup.Mode=None ", $" --PublicServerUrl={_config.OchestratorUrl} "}
+                ServerUrl = $"http://0.0.0.0:{_config.OrchestratorUrl.Split(':')[2] ?? "11801"}",
+                CommandLineArgs = new List<string> { " --Security.UnsecuredAccessAllowed=PublicNetwork ", " --Setup.Mode=None ", $" --PublicServerUrl={_config.OrchestratorUrl} "}
             });
             _reportingDocumentStore = EmbeddedServer.Instance.GetDocumentStore(new DatabaseOptions(OrchestratorDatabaseName));
             _reportingDocumentStore.Initialize();
             new LatestTestByName().Execute(_reportingDocumentStore);
+            new FailTests().Execute(_reportingDocumentStore);
 
             if (_config.Clusters == null || _config.Clusters.Length == 0)
             {
@@ -178,7 +179,7 @@ namespace TestingEnvironment.Orchestrator
         {
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
-                return session.Query<TestInfo>().OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName);;
+                return session.Query<TestInfo>().OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName);
             }
         }
 
@@ -353,6 +354,14 @@ namespace TestingEnvironment.Orchestrator
             }
 }        
 
-        #endregion        
+        #endregion
+
+        public List<TestInfo> GetFailingTests()
+        {
+            using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
+            {
+                return session.Query<TestInfo, FailTests>().OrderByDescending(x => x.Start).ToList();
+            }
+        }
     }
 }

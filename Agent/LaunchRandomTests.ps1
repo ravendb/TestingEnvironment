@@ -1,4 +1,4 @@
-param ( $remoteip, $hostip, $hostuser, $hostdomain, $ochestratorurl )
+param ( $remoteip, $hostip, $hostuser, $hostdomain, $orchestratorurl )
 
 $scenarioport=11802
 
@@ -8,7 +8,7 @@ function LaunchScenario
 
   date
   Write-Host "${scenario}"
-  .\LaunchRemoteScenarioCommand.ps1 $remoteip $scenarioport $hostip $hostuser $hostdomain $scenario $ochestratorurl
+  .\LaunchRemoteScenarioCommand.ps1 $remoteip $scenarioport $hostip $hostuser $hostdomain $scenario $orchestratorurl
 }
 
 $a=1
