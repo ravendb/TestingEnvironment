@@ -13,10 +13,12 @@ namespace Subscriptions
     class FilterAndProjection : BaseTest
     {
         private static int[] _shipper = new int[10];
+        private static int[] _shipperRes = new int[10];
         private static Guid[] _productsGuid = new Guid[16];
         private static Guid[] _shipperGuid = new Guid[10];
         private LinkedList<Task> _tasks = new LinkedList<Task>();
         private static Guid GenralGuid = Guid.NewGuid();
+        private static CancellationTokenSource[] _shipperCancellationTokenSource = new CancellationTokenSource[10];
 
         public FilterAndProjection(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Efrat")
         {
@@ -34,7 +36,6 @@ namespace Subscriptions
 
                 ReportInfo("Bulk insert users docs");
                 var bulkInsertUsersTask = Task.Run(() => BulkInsertUsersDocuments());
-                _tasks.AddLast(bulkInsertUsersTask);
 
                 try
                 {
@@ -82,20 +83,19 @@ namespace Subscriptions
 
                     ReportInfo("Start inserting products to users");
                     var usersSubscriptionRun = Task.Run(() => InsertProductsToUsers(usersSubscriptionWorker));
-                    _tasks.AddLast(usersSubscriptionRun);
 
                     ReportInfo("Start creating orders");
                     var orderSubscriptionRun = Task.Run(() => CreateOrderDoc(orderSubscriptionWorker));
-                    _tasks.AddLast(orderSubscriptionRun);
 
                     var i = 0;
-                   
+
                     foreach (var shipper in _shipperGuid)
                     {
+                        var s = "shipper." + GenralGuid + "/" + shipper;
                         var shipperSubscription = new SubscriptionCreationOptions<Order>
                         {
                             Name = $"shipperSubscription-{i}.{GenralGuid}",
-                            Filter = x => (x.ShipVia == $"shipper.{GenralGuid}-{shipper}"),
+                            Filter = x => (x.ShipVia.StartsWith(s))
                         };
 
                         ReportInfo($"Create subscriptions : shipperSubscription-{i}.{GenralGuid}");
@@ -104,7 +104,8 @@ namespace Subscriptions
                         var shipperSubscriptionWorkerOptions = new SubscriptionWorkerOptions(createShipperSubscription)
                         {
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
-                            MaxDocsPerBatch = 6
+                            MaxDocsPerBatch = 6,
+                            CloseWhenNoDocsLeft = false
                         };
 
                         ReportInfo($"shipperSubscription-{i}.{GenralGuid}: get subscriptions worker");
@@ -112,7 +113,7 @@ namespace Subscriptions
 
                         var i1 = i;
                         ReportInfo($"Start counting orders for shipper {i}. Id: {_shipperGuid[i]}");
-                        var getShipperTask = Task.Run(() => GetShipper(shipperSubscriptionWorker, i1));
+                        var getShipperTask =  Task.Run(() => GetShipper(shipperSubscriptionWorker, i1));
                         _tasks.AddLast(getShipperTask);
                         i += 1;
                     }
@@ -120,14 +121,27 @@ namespace Subscriptions
                 }
                 catch (Exception e)
                 {
-                   ReportFailure("Error:", e); 
+                    ReportFailure("Error:", e);
                 }
 
-                while (_tasks.All(x => (x.IsCompleted || x.IsCanceled)) == false)
+                while (_tasks.All(x => (x.IsCompleted)) == false)
                 {
-                    
                 }
-                ReportSuccess("Done");
+
+                var success = true;
+                for (int i = 0; i < 10; i++)
+                {
+                    if (_shipper[i] != _shipperRes[i])
+                    {
+                        ReportInfo($"{i}: {_shipper[i]} != {_shipperRes[i]}");
+                        success = false;
+                        break;
+                    }
+                }
+               if (success)
+                   ReportSuccess("Test done");
+                else
+                   ReportFailure("Test Failed", null);
             }
         }
 
@@ -194,7 +208,7 @@ namespace Subscriptions
         private void InsertProductsToUsers(SubscriptionWorker<dynamic> subscription)
         {
             var rand = new Random();
-            var ct = new CancellationTokenSource(new TimeSpan(0, 30, 0));
+            var ct = new CancellationTokenSource();
             int min = 0;
             subscription.Run(batch =>
             {
@@ -235,12 +249,6 @@ namespace Subscriptions
             {
                 foreach (var doc in batch.Items)
                 {
-                    /*if (doc.Id.StartsWith($"user2.{GenralGuid}") == false)
-                    {
-                        ReportInfo($"DocID: {doc.Id}");
-                        continue;
-                    }*/
-                        
                     using (var session = DocumentStore.OpenSession())
                     {
                         var shipper = rand.Next(0, 10);
@@ -251,44 +259,49 @@ namespace Subscriptions
                         {
                             list.AddFirst(x.Current.ToString());
                         }
-                        
+
                         var user = new Order
                         {
-                            ShipVia = $"shipper.{GenralGuid}-{_shipperGuid[shipper]}",
+                            ShipVia = $"shipper.{GenralGuid}/{_shipperGuid[shipper]}",
                             ShipTo = doc.Id,
                             ProductsNames = list
                         };
-                        session.Store(user,$"order.{GenralGuid}/");
+                        session.Store(user, $"order.{GenralGuid}/");
                         _shipper[shipper] += 1;
                         session.SaveChanges();
                     }
                 }
             }, ct.Token);
+            ReportInfo($"Finish creating orders docs");
         }
 
         private static int sum = 0;
         private void GetShipper(SubscriptionWorker<Order> subscription, int i)
         {
             var count = 0;
-            var ct = new CancellationTokenSource(new TimeSpan(0, 60, 0));
-
+            var ct = new CancellationTokenSource();
+            _shipperCancellationTokenSource[i] = ct;
             subscription.Run(batch =>
             {
                 foreach (var doc in batch.Items)
                 {
-                    if (doc.Id.StartsWith($"order.{GenralGuid}") == false)
+                    if (doc.Id.StartsWith("order." + GenralGuid) == false)
                         continue;
                     count += 1;
-                    sum += 1;
+                    _shipperRes[i] = count;
+                    Interlocked.Increment(ref sum);
+                    if (sum == 2500)
+                    {
+                        for (int j = 0; j < 10; j++)
+                        {
+                            if (i == j)
+                                continue;
+                            _shipperCancellationTokenSource[j].Cancel();
+                        }
+                        _shipperCancellationTokenSource[i].Cancel();
+                    }
                 }
-                
-            }, ct.Token);
-
-            SpinWait.SpinUntil(() => sum >= 2500);
-            
-            ReportInfo("Done collecting info");
-            if (_shipper[i] == count)
-                ReportSuccess($"shipper {i} - success");
+            }, ct.Token).Wait(ct.Token);
         }
 
         internal class User2
