@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,12 +11,15 @@ using TestingEnvironment.Client;
 
 namespace Subscriptions
 {
-    class FilterAndProjection : BaseTest
+    public class FilterAndProjection : BaseTest
     {
-        private static int[] _shipper = new int[10];
-        private static Guid[] _productsGuid = new Guid[16];
-        private static Guid[] _shipperGuid = new Guid[10];
-        private LinkedList<Task> _tasks = new LinkedList<Task>();
+        private const int ShippersCount = 1;
+        private const int ProductsCount = 9;
+
+        private static readonly int[] _shipper = new int[ShippersCount];
+        private static readonly Guid[] _productsGuid = new Guid[ProductsCount];
+        private static readonly Guid[] _shipperGuid = new Guid[ShippersCount];
+        private readonly LinkedList<Task> _tasks = new LinkedList<Task>();
         private static Guid GenralGuid = Guid.NewGuid();
 
         public FilterAndProjection(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Efrat")
@@ -136,7 +140,7 @@ namespace Subscriptions
             Guid guid;
             using (var session = DocumentStore.OpenSession())
             {
-                for (int i = 0; i < 16; i++)
+                for (int i = 0; i < ProductsCount; i++)
                 {
                     guid = Guid.NewGuid();
                     session.Store(new Product
@@ -157,7 +161,7 @@ namespace Subscriptions
             Guid guid;
             using (var session = DocumentStore.OpenSession())
             {
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < ShippersCount; i++)
                 {
                     guid = Guid.NewGuid();
                     session.Store(new Shipper
@@ -209,8 +213,9 @@ namespace Subscriptions
                     var randNumber1 = rand.Next(1, 6);
                     for (var i = 0; i < randNumber1; i++)
                     {
-                        var randNumber2 = rand.Next(0, 3);
-                        var randNumber3 = rand.Next(0, 5);
+                        var randNumber2 = rand.Next(0, 2);
+                        var randNumber3 = rand.Next(0, 4);
+                        Debug.Assert(randNumber2 * randNumber3 < ProductsCount);
                         if (doc.Result.Products == null)
                             doc.Result.Products = new LinkedList<string>();
                         doc.Result.Products.AddFirst($"products.{GenralGuid}/{_productsGuid[randNumber2 * randNumber3]}");
@@ -243,7 +248,7 @@ namespace Subscriptions
                         
                     using (var session = DocumentStore.OpenSession())
                     {
-                        var shipper = rand.Next(0, 10);
+                        var shipper = rand.Next(0, ShippersCount);
                         var list = new LinkedList<string>();
                         var x = (doc.Result.ProductsNames as JArray).GetEnumerator();
 

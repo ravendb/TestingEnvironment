@@ -20,7 +20,7 @@ namespace TestingEnvironment.Orchestrator
         public override void Configure(INancyEnvironment environment)
         {
             base.Configure(environment);
-            environment.Tracing(false, true); //enable showing error page for unhandled server exceptions
+            environment.Tracing(true, true); //enable showing error page for unhandled server exceptions
         }
 
         protected override void ConfigureApplicationContainer(TinyIoCContainer container)

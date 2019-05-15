@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TestingEnvironment.Orchestrator": {
+      "commandName": "Project",
+      "commandLineArgs": "http://10.0.0.69:9100"
+    }
+  }
+}

@@ -7,7 +7,7 @@ namespace Counters
 {
     public class PutCountersOnCommentsBasedOnTopic : BaseTest
     {
-        public PutCountersOnCommentsBasedOnTopic(string orchestratorUrl) : base(orchestratorUrl, "PutCountersOnCommentsBasedOnTopic", "Aviv")
+        public PutCountersOnCommentsBasedOnTopic(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
         {
         }
 

@@ -8,7 +8,7 @@ namespace Counters
 {
     public class SubscribeToCounterChanges : BaseTest
     {
-        public SubscribeToCounterChanges(string orchestratorUrl) : base(orchestratorUrl, "SubscribeToCounterChanges", "Aviv")
+        public SubscribeToCounterChanges(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
         {
         }
 

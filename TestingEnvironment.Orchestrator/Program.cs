@@ -12,7 +12,8 @@ namespace TestingEnvironment.Orchestrator
     {
         public static void Main(string[] args)
         {
-            Console.WriteLine("Running RavenDB Test Orchestrator.");
+            Console.WriteLine("Running RavenDB Test Orchestrator");
+            Console.WriteLine("=================================");
             CreateWebHostBuilder(args).Build().Run();
         }
 

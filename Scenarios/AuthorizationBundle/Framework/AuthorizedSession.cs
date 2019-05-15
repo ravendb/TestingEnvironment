@@ -71,7 +71,7 @@ namespace AuthorizationBundle
                     session.SaveChanges();
                 }
             }
-            catch (ConcurrencyException _)
+            catch (ConcurrencyException)
             {
                 using (OpenSession(_store, user, password))
                 {
@@ -131,7 +131,7 @@ namespace AuthorizationBundle
                 try
                 {
                     session.SaveChanges();
-                }catch(ConcurrencyException ce)
+                }catch(ConcurrencyException)
                 {
                     user = session.Load<AuthorizedUser>(userId);
                     group = session.Load<Group>(groupName);
@@ -252,7 +252,7 @@ namespace AuthorizationBundle
                     });
                     session.SaveChanges();
                 }
-                catch (ConcurrencyException _)
+                catch (ConcurrencyException)
                 {
                     var rootName = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>(UserPrefix + Root);
                     if (rootName.Value != root)
@@ -287,7 +287,7 @@ namespace AuthorizationBundle
                     }, groupName);
                     session.SaveChanges();
                 }
-                catch (ConcurrencyException _)
+                catch (ConcurrencyException)
                 {
                     //Group was already created 
                     var creator = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Group.GroupVersion>(GroupPrefix + groupName);

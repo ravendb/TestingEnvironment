@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.421
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28803.202
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestingEnvironment.Orchestrator", "TestingEnvironment.Orchestrator\TestingEnvironment.Orchestrator.csproj", "{E2121B6A-85A5-4627-ADFB-FB930A1F1F42}"
 EndProject
@@ -35,6 +35,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MarineResearch", "Scenarios\MarineResearch\MarineResearch.csproj", "{15855ED6-F6DA-4E35-9C30-219F8D4D9AE5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Subscriptions", "Scenarios\Subscriptions\Subscriptions.csproj", "{990CFC76-D12A-48CB-8827-D87583A591E0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestsRunner", "Agent\TestsRunner\TestsRunner.csproj", "{30DCD407-46CF-4A5A-B153-9D84E861B5F5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -82,6 +84,10 @@ Global
 		{990CFC76-D12A-48CB-8827-D87583A591E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{990CFC76-D12A-48CB-8827-D87583A591E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{990CFC76-D12A-48CB-8827-D87583A591E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30DCD407-46CF-4A5A-B153-9D84E861B5F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30DCD407-46CF-4A5A-B153-9D84E861B5F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30DCD407-46CF-4A5A-B153-9D84E861B5F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30DCD407-46CF-4A5A-B153-9D84E861B5F5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -94,6 +100,7 @@ Global
 		{B1D29531-8C64-4BBD-AE3D-9754C4CA578B} = {28FA38AF-A144-476F-B6D1-79A7532ED2CC}
 		{15855ED6-F6DA-4E35-9C30-219F8D4D9AE5} = {28FA38AF-A144-476F-B6D1-79A7532ED2CC}
 		{990CFC76-D12A-48CB-8827-D87583A591E0} = {28FA38AF-A144-476F-B6D1-79A7532ED2CC}
+		{30DCD407-46CF-4A5A-B153-9D84E861B5F5} = {2EF65611-C518-4E94-BC73-4AC47AFD83BC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D8EB129C-81E9-4C3D-A4A3-DA9092D30CDE}

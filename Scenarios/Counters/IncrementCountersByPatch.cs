@@ -10,7 +10,7 @@ namespace Counters
 {
     public class IncrementCountersByPatch : BaseTest
     {
-        public IncrementCountersByPatch(string orchestratorUrl) : base(orchestratorUrl, "IncrementCountersByPatch", "Aviv")
+        public IncrementCountersByPatch(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
         {
         }
 

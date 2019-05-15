@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Scenarios\AuthorizationBundle\AuthorizationBundle.csproj" />
+    <ProjectReference Include="..\..\Scenarios\BackupAndRestore\BackupAndRestore.csproj" />
+    <ProjectReference Include="..\..\Scenarios\BlogComment\BlogComment.csproj" />
+    <ProjectReference Include="..\..\Scenarios\CorruptedCasino\CorruptedCasino.csproj" />
+    <ProjectReference Include="..\..\Scenarios\Counters\Counters.csproj" />
+    <ProjectReference Include="..\..\Scenarios\MarineResearch\MarineResearch.csproj" />
+    <ProjectReference Include="..\..\Scenarios\Subscriptions\Subscriptions.csproj" />
+    <ProjectReference Include="..\..\TestingEnvironment.Client\TestingEnvironment.Client.csproj" />
+    <ProjectReference Include="..\..\TestingEnvironment.Common\TestingEnvironment.Common.csproj" />
+  </ItemGroup>
+
+</Project>

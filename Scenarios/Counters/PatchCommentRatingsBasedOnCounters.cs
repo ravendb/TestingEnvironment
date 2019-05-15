@@ -7,7 +7,7 @@ namespace Counters
 {
     public class PatchCommentRatingsBasedOnCounters : BaseTest
     {
-        public PatchCommentRatingsBasedOnCounters(string orchestratorUrl) : base(orchestratorUrl, "PatchCommentRatingsBasedOnCounters", "Aviv")
+        public PatchCommentRatingsBasedOnCounters(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
         {
         }
 
@@ -26,7 +26,7 @@ namespace Counters
 
                 if (toUpdateCount == 0)
                 {
-                    ReportInfo("Aborting patch. All docs have been updated in the last hour");
+                    ReportSuccess("Aborting patch. All docs have been updated in the last hour");
                     return;
                 }
 

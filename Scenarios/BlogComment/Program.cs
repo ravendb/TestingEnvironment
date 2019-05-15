@@ -4,7 +4,7 @@ using TestingEnvironment.Client;
 
 namespace BlogComment
 {
-    class Program
+    public class Program
     {
         static void Main(string[] args)
         {
@@ -59,7 +59,7 @@ namespace BlogComment
                         var count = session.Query<BlogComment>().Count();
                         if (count >= 10 * 1024)
                         {
-                            ReportInfo("Aborting BlogComment documents insertion, we already have enough docs");
+                            ReportSuccess("Aborting BlogComment documents insertion, we already have enough docs");
                             return;
                         }
                     }

@@ -11,7 +11,7 @@ namespace Counters
 {
     public class CounterRevisions : BaseTest
     {
-        public CounterRevisions(string orchestratorUrl) : base(orchestratorUrl, "CounterRevisions", "Aviv")
+        public CounterRevisions(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
         {
         }
 

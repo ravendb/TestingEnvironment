@@ -6,7 +6,7 @@ namespace Counters
 {
     public class PutCommentsTest : BaseTest
     {
-        public PutCommentsTest(string orchestratorUrl) : base(orchestratorUrl, "PutCommentsTest", "Aviv")
+        public PutCommentsTest(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
         {
         }
 
@@ -17,7 +17,7 @@ namespace Counters
                 var count = session.Query<BlogComment>().Count();
                 if (count >= 10 * 1024)
                 {
-                    ReportInfo("Aborting BlogComment documents insertion, we already have enough docs");
+                    ReportSuccess("Aborting BlogComment documents insertion, we already have enough docs");
                     return;
                 }
             }

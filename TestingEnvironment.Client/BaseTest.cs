@@ -9,7 +9,7 @@ namespace TestingEnvironment.Client
     public abstract class BaseTest : IDisposable
     {
         protected readonly string OrchestratorUrl;
-        protected readonly string TestName;
+        public readonly string TestName;
         
         private readonly string _author;
 
@@ -23,12 +23,13 @@ namespace TestingEnvironment.Client
             OrchestratorUrl = orchestratorUrl ?? throw new ArgumentNullException(nameof(orchestratorUrl));
             TestName = testName ?? throw new ArgumentNullException(nameof(testName));
             _author = author;
-            _orchestratorClient = new JsonServiceClient(OrchestratorUrl);
+            _orchestratorClient = new JsonServiceClient(OrchestratorUrl);           
         }
 
         public virtual void Initialize()
-        {            
-            var config = _orchestratorClient.Put<TestConfig>($"/register?testName={Uri.EscapeDataString(TestName)}&testClassName={Uri.EscapeDataString(GetType().FullName)}&author={Uri.EscapeDataString(_author)}",null);
+        {
+            var url = $"/register?testName={Uri.EscapeDataString(TestName)}&testClassName={Uri.EscapeDataString(GetType().FullName)}&author={Uri.EscapeDataString(_author)}";
+            var config = _orchestratorClient.Put<TestConfig>(url,null);
             DocumentStore = new DocumentStore
             {
                 Urls = config.Urls,
@@ -82,14 +83,15 @@ namespace TestingEnvironment.Client
             });
         }
 
-        protected virtual EventResponse ReportEvent(EventInfo eventInfo)
+        private EventResponse ReportEvent(EventInfo eventInfo)
         {
             var eventInfoWithExceptionAsString = new EventInfoWithExceptionAsString
             {
                 AdditionalInfo = eventInfo.AdditionalInfo,
                 Exception = eventInfo.Exception?.ToString(),
                 Message = eventInfo.Message,
-                Type = (EventInfoWithExceptionAsString.EventType)eventInfo.Type
+                Type = (EventInfoWithExceptionAsString.EventType)eventInfo.Type,
+                EventTime = DateTime.Now.ToString()
             };
             return _orchestratorClient.Post<EventResponse>($"/report?testName={TestName}", eventInfoWithExceptionAsString);
         }

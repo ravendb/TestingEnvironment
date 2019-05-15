@@ -18,8 +18,15 @@ namespace CorruptedCasino
 {
     public class CasinoTest : BaseTest
     {
-        public CasinoTest(string orchestratorUrl) : base(orchestratorUrl, "CorruptedCasinoTest", "Karmel")
+        public CasinoTest(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Karmel")
         {
+           
+        }
+
+        public override void Initialize()
+        {
+            base.Initialize();
+
             try
             {
                 new BetsIndex().Execute(DocumentStore);
@@ -30,7 +37,7 @@ namespace CorruptedCasino
             }
 
             // ConfigureExpiration
-            var configureExpirationOperationResult = DocumentStore.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration
+            var _ = DocumentStore.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration
             {
                 Disabled = false,
                 DeleteFrequencyInSec = 600
@@ -50,7 +57,7 @@ namespace CorruptedCasino
                 }
             };
 
-            var configureRevisionsOperationResult = DocumentStore.Maintenance.SendAsync(new ConfigureRevisionsOperation(config)).Result;
+            var _1 = DocumentStore.Maintenance.SendAsync(new ConfigureRevisionsOperation(config)).Result;
         }
 
         public IAsyncDocumentSession GetClusterSessionAsync => DocumentStore.OpenAsyncSession(new SessionOptions
@@ -92,10 +99,12 @@ namespace CorruptedCasino
                     group result by new { result.LotteryId, result.Won } into g
                     select new
                     {
+#pragma warning disable IDE0037 // Use inferred member name
                         LotteryId = g.Key.LotteryId,
                         Won = g.Key.Won,
                         Total = g.Sum(x => x.Total),
                         BetsId = g.Key.Won ? g.Select(b => b.BetsId[0]).ToArray() : null
+#pragma warning restore IDE0037 // Use inferred member name
                     };
             }
         }
@@ -147,10 +156,10 @@ namespace CorruptedCasino
                     {
                         // expected
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         // not expected at all!
-                        Console.WriteLine(e);
+                        // WriteLine(e);
                         throw;
                     }
                 });
@@ -186,68 +195,45 @@ namespace CorruptedCasino
         public async Task CreateAndRunLottery()
         {
             var policy = Policy.Handle<TimeoutException>().Retry(5);
-            Console.Write("Creating Lottery ... ");
+            // Write("Creating Lottery ... ");
             var lottery = await Lottery.CreateLottery(this);
 
-            ReportEvent(new EventInfo
-            {
-                Message = $"Lottery {lottery.Id} was created and will overdue at {lottery.DueTime}",
-                Type = EventInfo.EventType.Info
-            });
-            Console.WriteLine($"Done {lottery.Id}");
+            ReportInfo($"Lottery {lottery.Id} was created and will overdue at {lottery.DueTime}");
+            // WriteLine($"Done {lottery.Id}");
 
-            Console.WriteLine("Start betting");
+            // WriteLine("Start betting");
             var t = StartPlacingBets(lottery, 1000);
-            ReportEvent(new EventInfo
-            {
-                Message = $"Start betting in lottery {lottery.Id}",
-                Type = EventInfo.EventType.Info
-            });
+            ReportInfo($"Start betting in lottery {lottery.Id}");
+
             var sleep = (int)(lottery.DueTime - DateTime.UtcNow).TotalMilliseconds;
             if (sleep > 10)
                 await Task.Delay(sleep);
 
-            ReportEvent(new EventInfo
-            {
-                Message = $"Lottery {lottery.Id} is overdue",
-                Type = EventInfo.EventType.Info
-            });
+            ReportInfo($"Lottery {lottery.Id} is overdue");
 
-            Console.Write("Finalize bets ... ");
+            // Write("Finalize bets ... ");
             await policy.Execute(lottery.FinalizeBets);
-            Console.WriteLine("Done");
+            // WriteLine("Done");
 
-            ReportEvent(new EventInfo
-            {
-                Message = $"Rolling the dice for lottery {lottery.Id}",
-                Type = EventInfo.EventType.Info
-            });
-            Console.WriteLine("Rolling the Dice ... ");
+            ReportInfo($"Rolling the dice for lottery {lottery.Id}");
+            // WriteLine("Rolling the Dice ... ");
             lottery.RollTheDice();
-            Console.Write("Completing the lottery ... ");
+            // Write("Completing the lottery ... ");
 
             await policy.Execute(lottery.Complete);
-            ReportEvent(new EventInfo
-            {
-                Message = $"Lottery {lottery.Id} is completed",
-                Type = EventInfo.EventType.Info
-            });
-            Console.WriteLine("Done");
+            ReportInfo($"Lottery {lottery.Id} is completed");
+            // WriteLine("Done");
 
             var profit = await policy.Execute(lottery.GetFinalBettingReport);
-            ReportEvent(new EventInfo
-            {
-                Message = $"Report for lottery {lottery.Id} was generated and winners were rewarded.",
-                Type = EventInfo.EventType.TestSuccess
-            });
-            Console.WriteLine(profit);
+            ReportInfo($"Report for lottery {lottery.Id} was generated and winners were rewarded.");
+            // WriteLine(profit);
 
             await t;
         }
 
         public override void RunActualTest()
         {
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 3; i++)
             {
                 var t = Task.Run(CreateAndRunLottery);
 

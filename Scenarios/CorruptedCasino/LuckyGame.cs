@@ -167,14 +167,14 @@ namespace CorruptedCasino
                             winner.Credit += bet.Value.Price * WinRatio;
                         }
                        
-                        Console.WriteLine($"{winner.Name} has won!!");
+                        // WriteLine($"{winner.Name} has won!!");
                     }
 
                     await session.SaveChangesAsync();
                 }
                 else
                 {
-                    Console.WriteLine("No winners! the house take it all!");
+                    // WriteLine("No winners! the house take it all!");
                 }
 
                 return losers?.Total ?? 0 - (winners?.Total ?? 0) * WinRatio;
@@ -218,7 +218,7 @@ namespace CorruptedCasino
             using (var session = CasinoTestInstance.GetSessionAsync)
             {
                 var winners = await RewardWinners(session);
-                Console.WriteLine(winners.Count > 0 ? "We have a winner!!" : $"No one won the lottery {Id} :(");
+                // WriteLine(winners.Count > 0 ? "We have a winner!!" : $"No one won the lottery {Id} :(");
             }
         }
 

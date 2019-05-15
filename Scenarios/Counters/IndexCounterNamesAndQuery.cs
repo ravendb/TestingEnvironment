@@ -41,7 +41,7 @@ namespace Counters
 
         #endregion
 
-        public IndexQueryOnCounterNames(string orchestratorUrl) : base(orchestratorUrl, "IndexQueryOnCounterNames", "Aviv")
+        public IndexQueryOnCounterNames(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
         {
         }
 

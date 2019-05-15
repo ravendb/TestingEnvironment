@@ -23,7 +23,7 @@ namespace Counters
 
         #endregion
 
-        public QueryBlogCommentsAndIncludeCounters(string orchestratorUrl) : base(orchestratorUrl, "QueryBlogCommentsAndIncludeCounters", "Aviv")
+        public QueryBlogCommentsAndIncludeCounters(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
         {
         }
 

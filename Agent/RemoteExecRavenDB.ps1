@@ -40,9 +40,9 @@ Write-Host "[TE] Setting firewall ALLOW rule for Raven.Server.exe..."
 Remove-NetFirewallRule -DisplayName TestingEnvironment -ErrorAction Ignore
 New-NetFirewallRule -DisplayName TestingEnvironment -Program "${prefix}\${ravendbdir}\Server\Raven.Server.exe"
 Write-Host "[TE] Executing RavenDB..."
-Write-Host ".\Raven.Server.exe --PublicServerUrl=http://${hostip}:${hostport} --ServerUrl=http://${hostip}:${hostport} -Security.UnsecuredAccessAllowed=PublicNetwork --Setup.Mode=None"
+Write-Host ".\Raven.Server.exe --PublicServerUrl=http://${hostip}:${hostport} --ServerUrl=http://${hostip}:${hostport} -Security.UnsecuredAccessAllowed=PublicNetwork --Setup.Mode=None --DataDir=C:\\Users\\orev\\TestingEnvironment\\DataDirTe"
 
-.\Raven.Server.exe --PublicServerUrl=http://${hostip}:${hostport} --ServerUrl=http://${hostip}:${hostport} --Security.UnsecuredAccessAllowed=PublicNetwork --Setup.Mode=None
+.\Raven.Server.exe --PublicServerUrl=http://${hostip}:${hostport} --ServerUrl=http://${hostip}:${hostport} --Security.UnsecuredAccessAllowed=PublicNetwork --Setup.Mode=None --DataDir=C:\\Users\\orev\\TestingEnvironment\\DataDirTe
 
 Write-Host "[TE] Exiting Script !!"
 

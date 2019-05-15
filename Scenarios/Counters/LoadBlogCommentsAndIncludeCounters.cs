@@ -8,7 +8,7 @@ namespace Counters
 {
     public class LoadBlogCommentsAndIncludeCounters : BaseTest
     {
-        public LoadBlogCommentsAndIncludeCounters(string orchestratorUrl) : base(orchestratorUrl, "LoadBlogCommentsAndIncludeCounters", "Aviv")
+        public LoadBlogCommentsAndIncludeCounters(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
         {
         }
 

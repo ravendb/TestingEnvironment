@@ -8,7 +8,7 @@ using TestingEnvironment.Client;
 
 namespace AuthorizationBundle
 {
-    internal class HospitalTest : BaseTest
+    public class HospitalTest : BaseTest
     {
         public HospitalTest(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Tal")
         {
@@ -173,7 +173,7 @@ namespace AuthorizationBundle
         private void GenerateMembersForGroup(AuthorizedSession session, string groupName)
         {
             var random = new Random(GetStableHashCode(groupName));
-            var numberOfMembers = random.Next(50, 100);
+            var numberOfMembers = random.Next(5, 10);
             for (int i = 0; i < numberOfMembers; i++)
             {
                 var user = GenerateRandomUser();

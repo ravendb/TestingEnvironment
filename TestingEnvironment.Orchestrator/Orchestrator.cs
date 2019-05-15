@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
@@ -61,6 +62,12 @@ namespace TestingEnvironment.Orchestrator
                 throw new InvalidOperationException("Must be at least one database configured!");
             }
 
+            Console.WriteLine("=====================================================");
+            Console.WriteLine($"EmbeddedServerUrl:{_config.EmbeddedServerUrl}");
+            Console.WriteLine($"OrchestratorUrl:{_config.OrchestratorUrl}");
+            Console.WriteLine("=====================================================");
+
+
             foreach (var serverInfo in _config.LocalRavenServers ?? Enumerable.Empty<ServerInfo>())
             {
                 RaiseServer(serverInfo);
@@ -68,8 +75,8 @@ namespace TestingEnvironment.Orchestrator
             
             EmbeddedServer.Instance.StartServer(new ServerOptions
             {  
-                ServerUrl = $"http://0.0.0.0:{_config.OrchestratorUrl.Split(':')[2] ?? "11801"}",
-                CommandLineArgs = new List<string> { " --Security.UnsecuredAccessAllowed=PublicNetwork ", " --Setup.Mode=None ", $" --PublicServerUrl={_config.OrchestratorUrl} "}
+                ServerUrl = _config.EmbeddedServerUrl,
+                CommandLineArgs = new List<string> { " --Security.UnsecuredAccessAllowed=PublicNetwork ", " --Setup.Mode=None ", $" --PublicServerUrl={_config.EmbeddedServerUrl}"}
             });
             _reportingDocumentStore = EmbeddedServer.Instance.GetDocumentStore(new DatabaseOptions(OrchestratorDatabaseName));
             _reportingDocumentStore.Initialize();
@@ -143,6 +150,7 @@ namespace TestingEnvironment.Orchestrator
 
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
+                session.Advanced.UseOptimisticConcurrency = true;
                 var now = DateTime.UtcNow;
                 session.Store(new TestInfo
                 {
@@ -163,22 +171,39 @@ namespace TestingEnvironment.Orchestrator
         //mostly needed to detect if some client is stuck/hang out    
         public void UnregisterTest(string testName)
         {
-            using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
+            var sp = Stopwatch.StartNew();
+            var retry = false;
+            do
             {
-                var latestTestInfo = session.Query<TestInfo, LatestTestByName>().FirstOrDefault(x => x.Name == testName);
-                if (latestTestInfo != null)
+                try
                 {
-                    latestTestInfo.End = DateTime.UtcNow;
-                    session.Store(latestTestInfo);
-                    session.SaveChanges();
+                    using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
+                    {
+                        session.Advanced.UseOptimisticConcurrency = true;
+                        var latestTestInfo = session.Query<TestInfo>().FirstOrDefault(x => x.Name == testName);
+                        if (latestTestInfo != null)
+                        {
+                            latestTestInfo.End = DateTime.UtcNow;
+                            session.Store(latestTestInfo);
+                            session.SaveChanges();
+                        }
+                    }
+                    retry = false;
                 }
-            }
+                catch (Raven.Client.Exceptions.ConcurrencyException)
+                {
+                    retry = true;
+                    if (sp.Elapsed.TotalSeconds > 30)
+                        throw;
+                }
+            } while (retry);
         }
 
         public TestInfo GetLastTestByName(string testName)
         {
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
+                session.Advanced.UseOptimisticConcurrency = true;
                 return session.Query<TestInfo>().OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName);
             }
         }
@@ -187,10 +212,12 @@ namespace TestingEnvironment.Orchestrator
         {
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
-                var latestTest = session.Query<TestInfo>().OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName);
+                session.Advanced.UseOptimisticConcurrency = true;
+                var latestTest = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName);
                 if (latestTest != null)
                 {
                     latestTest.Events.Add(@event);
+                    var requests = session.Advanced.NumberOfRequests;
                     session.SaveChanges();
                 }
 
@@ -199,7 +226,7 @@ namespace TestingEnvironment.Orchestrator
                 {
                     Type = EventResponse.ResponseType.Ok 
                 };
-            }
+            }            
         }
         
         private void EnsureDatabaseExists(string databaseName, IDocumentStore documentStore, bool truncateExisting = false)
@@ -248,9 +275,9 @@ namespace TestingEnvironment.Orchestrator
                 UseShellExecute = false,                
             };
             
-            var process = Process.Start(processStartInfo);
+            var _ = Process.Start(processStartInfo);
 
-            string url = null;
+            //string url = null;
             //var outputString = ReadOutput(process.StandardOutput, async (line, builder) =>
             //{
             //    if (line == null)
@@ -273,86 +300,86 @@ namespace TestingEnvironment.Orchestrator
             //});
         }
 
-        private static string ReadOutput(StreamReader output, Func<string, StringBuilder, Task<bool>> onLine)
-        {
-            var sb = new StringBuilder();
+        //private static string ReadOutput(StreamReader output, Func<string, StringBuilder, Task<bool>> onLine)
+        //{
+        //    var sb = new StringBuilder();
 
-            var startupDuration = Stopwatch.StartNew();
+        //    var startupDuration = Stopwatch.StartNew();
 
-            Task<string> readLineTask = null;
-            while (true)
-            {
-                if (readLineTask == null)
-                    readLineTask = output.ReadLineAsync();
+        //    Task<string> readLineTask = null;
+        //    while (true)
+        //    {
+        //        if (readLineTask == null)
+        //            readLineTask = output.ReadLineAsync();
 
-                var hasResult = readLineTask.WaitWithTimeout(TimeSpan.FromSeconds(5)).Result;
+        //        var hasResult = readLineTask.WaitWithTimeout(TimeSpan.FromSeconds(5)).Result;
 
-                if (startupDuration.Elapsed > TimeSpan.FromSeconds(30))
-                    return null;
+        //        if (startupDuration.Elapsed > TimeSpan.FromSeconds(30))
+        //            return null;
 
-                if (hasResult == false)
-                    continue;
+        //        if (hasResult == false)
+        //            continue;
 
-                var line = readLineTask.Result;
+        //        var line = readLineTask.Result;
 
-                readLineTask = null;
+        //        readLineTask = null;
 
-                if (line != null)
-                    sb.AppendLine(line);
+        //        if (line != null)
+        //            sb.AppendLine(line);
 
-                var shouldStop = false;
-                if (onLine != null)
-                    shouldStop = onLine(line, sb).Result;
+        //        var shouldStop = false;
+        //        if (onLine != null)
+        //            shouldStop = onLine(line, sb).Result;
 
-                if (shouldStop)
-                    break;
+        //        if (shouldStop)
+        //            break;
 
-                if (line == null)
-                    break;
-            }
+        //        if (line == null)
+        //            break;
+        //    }
 
-            return sb.ToString();
-        }
+        //    return sb.ToString();
+        //}
 
-        private void ShutdownServerProcess(Process process)
-        {
-            if (process == null || process.HasExited)
-                return;
+        //private void ShutdownServerProcess(Process process)
+        //{
+        //    if (process == null || process.HasExited)
+        //        return;
 
-            lock (process)
-            {
-                if (process.HasExited)
-                    return;
+        //    lock (process)
+        //    {
+        //        if (process.HasExited)
+        //            return;
 
-                try
-                {
-                    Console.WriteLine($"Try shutdown server PID {process.Id} gracefully.");
+        //        try
+        //        {
+        //            Console.WriteLine($"Try shutdown server PID {process.Id} gracefully.");
 
-                    using (var inputStream = process.StandardInput)
-                    {
-                        inputStream.Write($"q{Environment.NewLine}y{Environment.NewLine}");
-                    }
+        //            using (var inputStream = process.StandardInput)
+        //            {
+        //                inputStream.Write($"q{Environment.NewLine}y{Environment.NewLine}");
+        //            }
 
-                    if (process.WaitForExit((int) 30000))
-                        return;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Failed to shutdown server PID {process.Id} gracefully in 30Secs", e);
-                }
+        //            if (process.WaitForExit((int) 30000))
+        //                return;
+        //        }
+        //        catch (Exception e)
+        //        {
+        //            Console.WriteLine($"Failed to shutdown server PID {process.Id} gracefully in 30Secs", e);
+        //        }
 
-                try
-                {
-                    Console.WriteLine($"Killing global server PID {process.Id}.");
+        //        try
+        //        {
+        //            Console.WriteLine($"Killing global server PID {process.Id}.");
 
-                    process.Kill();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Failed to kill process {process.Id}", e);
-                }
-            }
-}        
+        //            process.Kill();
+        //        }
+        //        catch (Exception e)
+        //        {
+        //            Console.WriteLine($"Failed to kill process {process.Id}", e);
+        //        }
+        //    }
+        // }        
 
         #endregion
 
@@ -360,6 +387,7 @@ namespace TestingEnvironment.Orchestrator
         {
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
+                session.Advanced.UseOptimisticConcurrency = true;
                 return session.Query<TestInfo, FailTests>().OrderByDescending(x => x.Start).ToList();
             }
         }

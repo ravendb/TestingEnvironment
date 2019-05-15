@@ -45,7 +45,7 @@ namespace MarineResearch
             var expected = await MeasurementUploading(collection);
 
             var csvStream = await ExportCsvDailyReport(outputCollection);
-            var actual = ToList(csvStream);
+            var _ = ToList(csvStream); // actual
 
             var groupBy = GroupByTime(expected);
 
@@ -166,21 +166,15 @@ namespace MarineResearch
                 }
                 catch (Exception e)
                 {
-                    var reportInfo = new EventInfo
-                    {
-                        Exception = e,
-                        Message = $"Fail to {description} ({count} of {nTimes})",
-                    };
+                    var message = $"Fail to {description} ({count} of {nTimes})";
 
                     if (count >= nTimes)
                     {
-                        reportInfo.Type = EventInfo.EventType.TestFailure;
-                        ReportEvent(reportInfo);
+                        ReportFailure(message, e);
                         throw;
                     }
 
-                    reportInfo.Type = EventInfo.EventType.Error;
-                    ReportEvent(reportInfo);
+                    ReportFailure(message, e, new Dictionary<string, string>() { ["Warning"] = "Failed but retrying..." });
                     count++;
                 }
             }
@@ -217,7 +211,7 @@ namespace MarineResearch
         {
             var dateTime = new DateTime(2019, 1, 1);
             var list = new List<Measurement>();
-            for (var i = 0; i < 120; i++)
+            for (var i = 0; i < 2; i++)
             {
                 var requestExecutor = DocumentStore.GetRequestExecutor();
                 using (var session = DocumentStore.OpenSession())
