@@ -1,14 +1,15 @@
-﻿namespace CorruptedCasino
+﻿using System;
+using System.Threading.Tasks;
+
+namespace CorruptedCasino
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            using (var client = new CasinoTest(args[0], "CorruptedCasinoTest"))
-            {
-                client.Initialize();
-                client.RunTest();
-            }            
+            await Casino.Bootstrap();
+            Casino.Instance.RunActualTest();
+            Console.ReadLine();
         }
     }
 }

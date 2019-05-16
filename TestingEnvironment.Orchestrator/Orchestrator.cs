@@ -82,6 +82,7 @@ namespace TestingEnvironment.Orchestrator
             _reportingDocumentStore.Initialize();
             new LatestTestByName().Execute(_reportingDocumentStore);
             new FailTests().Execute(_reportingDocumentStore);
+            new FailTestsComplete().Execute(_reportingDocumentStore);
 
             if (_config.Clusters == null || _config.Clusters.Length == 0)
             {

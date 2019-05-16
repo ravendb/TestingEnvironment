@@ -29,26 +29,23 @@ namespace TestsRunner
 
                 var tests = new Type[]
                 {
-                    // typeof(AuthorizationBundle.HospitalTest),                    
-                    // typeof(BlogComment.Program.PutCommentsTest),
-
-                    typeof(CorruptedCasino.CasinoTest),
-
-                    //typeof(Counters.PutCommentsTest),
-                    //typeof(Counters.PutCountersOnCommentsBasedOnTopic),
-                    //typeof(Counters.PutCountersOnCommentsRandomly),
-                    //typeof(Counters.QueryBlogCommentsByTag),
-                    //typeof(Counters.PatchCommentRatingsBasedOnCounters),
-                    //typeof(Counters.QueryBlogCommentsAndIncludeCounters),
-                    //typeof(Counters.LoadBlogCommentsAndIncludeCounters),
-                    //typeof(Counters.IncrementCountersByPatch),
-                    //typeof(Counters.SubscribeToCounterChanges),
-                    //typeof(Counters.IndexQueryOnCounterNames),
-                    //typeof(Counters.CounterRevisions),
-
-                    //typeof(MarineResearch.MarineResearchTest),
-                    //typeof(Subscriptions.FilterAndProjection),
-                    //typeof(BackupAndRestore.BackupAndRestore)
+                   typeof(AuthorizationBundle.HospitalTest),
+                   typeof(BlogComment.Program.PutCommentsTest),
+                   typeof(CorruptedCasino.Casino),
+                   typeof(Counters.PutCommentsTest),
+                   typeof(Counters.PutCountersOnCommentsBasedOnTopic),
+                   typeof(Counters.PutCountersOnCommentsRandomly),
+                   typeof(Counters.QueryBlogCommentsByTag),
+                   typeof(Counters.PatchCommentRatingsBasedOnCounters),
+                   typeof(Counters.QueryBlogCommentsAndIncludeCounters),
+                   typeof(Counters.LoadBlogCommentsAndIncludeCounters),
+                   typeof(Counters.IncrementCountersByPatch),
+                   typeof(Counters.SubscribeToCounterChanges),
+                   typeof(Counters.IndexQueryOnCounterNames),
+                   typeof(Counters.CounterRevisions),
+                   typeof(MarineResearch.MarineResearchTest),
+                   // typeof(Subscriptions.FilterAndProjection),
+                   // typeof(BackupAndRestore.BackupAndRestore)
                 };
 
                 var ctorTypes = new Type[] { typeof(string), typeof(string) };
@@ -72,9 +69,8 @@ namespace TestsRunner
 
                 stdOut.WriteLine();
                 stdOut.WriteLine("Runing Tests:");
-                // for (int i = 0; i < 7; i++)
+                while(true)
                 {
-
                     foreach (var test in testsList)
                     {
                         var sp = Stopwatch.StartNew();

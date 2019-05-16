@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
 
@@ -52,9 +53,9 @@ namespace CorruptedCasino
             return Name;
         }
 
-        public static async Task<User> RegisterOrLoad(CasinoTest instance, string email, string name)
+        public static async Task<User> RegisterOrLoad(string email, string name)
         {
-            using (var session = instance.GetClusterSessionAsync)
+            using (var session = Casino.GetClusterSessionAsync)
             {
                 var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(email);
                 if (result?.Value != null)
@@ -70,7 +71,7 @@ namespace CorruptedCasino
                 Credit = 1000
             };
 
-            using (var session = instance.GetClusterSessionAsync)
+            using (var session = Casino.GetClusterSessionAsync)
             {
                 await session.StoreAsync(user);
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue(user.Email, user.Id);
@@ -80,9 +81,9 @@ namespace CorruptedCasino
             return user;
         }
 
-        public static async Task Delete(CasinoTest instance, string email)
+        public static async Task Delete(string email)
         {
-            using (var session = instance.GetClusterSessionAsync)
+            using (var session = Casino.GetClusterSessionAsync)
             {
                 var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(email);
                 session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(email, result.Index);
@@ -91,10 +92,10 @@ namespace CorruptedCasino
             }
         }
 
-        public static async Task AddAvatar(CasinoTest instance, string id, string path)
+        public static async Task AddAvatar(string id, string path)
         {
             using (var stream = new FileStream(path, FileMode.Open))
-            using (var session = instance.GetSessionAsync)
+            using (var session = Casino.GetSessionAsync)
             {
                 session.Advanced.Attachments.Store(id, "Avatar", stream);
                 await session.SaveChangesAsync();
@@ -111,12 +112,12 @@ namespace CorruptedCasino
         public List<string> Bets = new List<string>();
         public long Credit;
 
-        public async Task PlaceBet(CasinoTest instance, string lotteryId, int[] numbers, int price)
+        public async Task PlaceBet(string lotteryId, int[] numbers, int price)
         {
             if (price <= 0)
                 throw new ArgumentException("Price must be positive number.");
 
-            using (var session = instance.GetSessionAsync)
+            using (var session = Casino.GetSessionAsync)
             {
                 var user = await session.LoadAsync<User>(Id);
                 if (user.Credit < price)
@@ -131,9 +132,9 @@ namespace CorruptedCasino
                     BetStatus = Bet.Status.Active
                 };
 
+                await session.StoreAsync(bet);
                 session.Advanced.GetMetadataFor(bet)[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMinutes(10);
 
-                await session.StoreAsync(bet);
                 user.Credit -= price;
                 user.Bets.Add(bet.Id);
 
@@ -144,12 +145,12 @@ namespace CorruptedCasino
             }
         }
 
-        public async Task ChangeBet(CasinoTest instance, string betId, int[] numbers, int price)
+        public async Task ChangeBet(string betId, int[] numbers, int price)
         {
             if (price <= 0)
                 throw new ArgumentException("Price must be positive number.");
 
-            using (var session = instance.GetSessionAsync)
+            using (var session = Casino.GetSessionAsync)
             {
                 var bet = await session.LoadAsync<Bet>(betId);
 
@@ -170,9 +171,9 @@ namespace CorruptedCasino
             }
         }
 
-        public async Task DeleteBet(CasinoTest instance, string betId)
+        public async Task DeleteBet(string betId)
         {
-            using (var session = instance.GetSessionAsync)
+            using (var session = Casino.GetSessionAsync)
             {
                 var user = await session.LoadAsync<User>(Id);
                 var bet = await session.LoadAsync<Bet>(betId);
