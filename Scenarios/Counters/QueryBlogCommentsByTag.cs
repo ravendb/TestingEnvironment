@@ -30,7 +30,7 @@ namespace Counters
         public override void RunActualTest()
         {
 
-            using (var session = DocumentStore.OpenSession())
+            using ( var session = DocumentStore.OpenSession())
             {
                 ReportInfo("Started querying docs where Tag in ('Sports', 'Music', 'Tech')");
 

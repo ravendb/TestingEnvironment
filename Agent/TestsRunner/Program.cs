@@ -31,18 +31,21 @@ namespace TestsRunner
                 {
                     // typeof(AuthorizationBundle.HospitalTest),                    
                     // typeof(BlogComment.Program.PutCommentsTest),
-                    // typeof(CorruptedCasino.CasinoTest),
-                     typeof(Counters.PutCommentsTest),
-                     typeof(Counters.PutCountersOnCommentsBasedOnTopic),
-                     typeof(Counters.PutCountersOnCommentsRandomly),
-                     typeof(Counters.QueryBlogCommentsByTag),
-                    typeof(Counters.PatchCommentRatingsBasedOnCounters),
-                    typeof(Counters.QueryBlogCommentsAndIncludeCounters),
-                    typeof(Counters.LoadBlogCommentsAndIncludeCounters),
-                    typeof(Counters.IncrementCountersByPatch),
-                    typeof(Counters.SubscribeToCounterChanges),
-                    typeof(Counters.IndexQueryOnCounterNames),
-                    typeof(Counters.CounterRevisions),
+
+                    typeof(CorruptedCasino.CasinoTest),
+
+                    //typeof(Counters.PutCommentsTest),
+                    //typeof(Counters.PutCountersOnCommentsBasedOnTopic),
+                    //typeof(Counters.PutCountersOnCommentsRandomly),
+                    //typeof(Counters.QueryBlogCommentsByTag),
+                    //typeof(Counters.PatchCommentRatingsBasedOnCounters),
+                    //typeof(Counters.QueryBlogCommentsAndIncludeCounters),
+                    //typeof(Counters.LoadBlogCommentsAndIncludeCounters),
+                    //typeof(Counters.IncrementCountersByPatch),
+                    //typeof(Counters.SubscribeToCounterChanges),
+                    //typeof(Counters.IndexQueryOnCounterNames),
+                    //typeof(Counters.CounterRevisions),
+
                     //typeof(MarineResearch.MarineResearchTest),
                     //typeof(Subscriptions.FilterAndProjection),
                     //typeof(BackupAndRestore.BackupAndRestore)
@@ -69,8 +72,9 @@ namespace TestsRunner
 
                 stdOut.WriteLine();
                 stdOut.WriteLine("Runing Tests:");
-                // while (true)
+                // for (int i = 0; i < 7; i++)
                 {
+
                     foreach (var test in testsList)
                     {
                         var sp = Stopwatch.StartNew();
@@ -84,6 +88,7 @@ namespace TestsRunner
                     }
                     stdOut.WriteLine();
                 }
+
 
             }
             finally

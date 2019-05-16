@@ -37,11 +37,11 @@ namespace CorruptedCasino
             }
 
             // ConfigureExpiration
-            var _ = DocumentStore.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration
+            DocumentStore.Maintenance.Send(new ConfigureExpirationOperation(new ExpirationConfiguration
             {
                 Disabled = false,
                 DeleteFrequencyInSec = 600
-            })).Result;
+            }));
 
             // ConfigureRevisions
             var config = new RevisionsConfiguration
@@ -57,7 +57,7 @@ namespace CorruptedCasino
                 }
             };
 
-            var _1 = DocumentStore.Maintenance.SendAsync(new ConfigureRevisionsOperation(config)).Result;
+            DocumentStore.Maintenance.Send(new ConfigureRevisionsOperation(config));
         }
 
         public IAsyncDocumentSession GetClusterSessionAsync => DocumentStore.OpenAsyncSession(new SessionOptions
@@ -135,13 +135,13 @@ namespace CorruptedCasino
                 {
                     try
                     {
-                        await Task.Delay(Lottery.Rand.Next(500, 1000));
+                       // await Task.Delay(Lottery.Rand.Next(500, 1000));
                         var name = UserOperations.GetName();
-                        var user = await UserOperations.RegisterOrLoad(this,$"{name}@karmel.com", name);
+                        var user = await UserOperations.RegisterOrLoad(Lottery.CasinoTestInstance,$"{name}@karmel.com", name);
                         for (int j = 0; j < 10; j++)
                         {
-                            await Task.Delay(Lottery.Rand.Next(500, 1000));
-                            await user.PlaceBet(this, lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10));
+                        //    await Task.Delay(Lottery.Rand.Next(500, 1000));
+                            await user.PlaceBet(Lottery.CasinoTestInstance, lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10));
                         }
                     }
                     catch (ConcurrencyException)
@@ -177,11 +177,11 @@ namespace CorruptedCasino
                 {
                     await Task.Delay(Lottery.Rand.Next(100, 1000));
                     var name = UserOperations.GetName();
-                    var user = await UserOperations.RegisterOrLoad(lottery.CasinoTestInstance,$"{name}@karmel.com", name);
+                    var user = await UserOperations.RegisterOrLoad(Lottery.CasinoTestInstance,$"{name}@karmel.com", name);
                     while (true)
                     {
                         await Task.Delay(Lottery.Rand.Next(100, 500));
-                        await user.PlaceBet(lottery.CasinoTestInstance, lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10));
+                        await user.PlaceBet(Lottery.CasinoTestInstance, lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10));
                     }
                 });
             }

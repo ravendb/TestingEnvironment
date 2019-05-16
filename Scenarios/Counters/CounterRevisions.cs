@@ -67,6 +67,7 @@ namespace Counters
                 ReportInfo($"Incrementing counter 'likes' and updating LastModified on doc {docId}.");
 
                 session.CountersFor(doc).Increment("likes");
+                session.CountersFor(doc).Increment("total-views");
                 doc.LastModified = DateTime.UtcNow;
                 
                 session.SaveChanges();

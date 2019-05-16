@@ -15,7 +15,7 @@ namespace Counters
         public override void RunActualTest()
         {
             var now = DateTime.UtcNow;
-
+            int notToUpdateCount = 0;
             using (var session = DocumentStore.OpenSession())
             {
                 ReportInfo("Starting PatchByQueryOperation on BlogComments collection");
@@ -24,6 +24,8 @@ namespace Counters
                 var toUpdateCount = session.Query<BlogComment>()
                     .Where(comment => comment.LastModified < now.AddMinutes(-15))
                     .Count();
+
+                notToUpdateCount = session.Query<BlogComment>().Count() - toUpdateCount;
 
                 if (toUpdateCount == 0)
                 {
@@ -77,12 +79,10 @@ namespace Counters
                     .Where(comment => comment.LastModified < almostNow)
                     .Count();
 
-
-
-                if (count != 0)
+                if (count != notToUpdateCount) 
                 {
                     ReportFailure("Failed. Expected to have no BlogComment docs that have " +
-                                  $"LastModified < {almostNow:o}, but found {count} such docs. ", null);
+                                  $"LastModified < {almostNow:o}, but found {count} such docs. (notToUpdateCount={notToUpdateCount})", null);
                 }
                 else
                 {

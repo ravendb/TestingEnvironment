@@ -72,7 +72,7 @@ namespace Counters
                     var comment = new BlogComment
                     {
                         PostedAt = randDate,
-                        LastModified = DateTime.UtcNow.AddYears(-1),
+                        LastModified = DateTime.MinValue,
                         Author = "Jon Doe",
                         Text = "Some text",
                         Tag = randTag

@@ -114,7 +114,7 @@ namespace CorruptedCasino
             });
         }
 
-        public CasinoTest CasinoTestInstance { get; set; }
+        public static CasinoTest CasinoTestInstance { get; set; }
 
         public async Task FinalizeBets()
         {

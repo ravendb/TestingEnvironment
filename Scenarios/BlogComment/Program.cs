@@ -94,11 +94,9 @@ namespace BlogComment
                 using (var bulk = DocumentStore.BulkInsert())
                 {
                     // bulk insert 1000 BlogComment docs
-
-                    for (int i = 0; i < 1024; i++)
+                    var rnd = this.Random;
+                    for (int i = 0; i < rnd.Next(300,800); i++)
                     {
-                        var rnd = new Random();
-
                         var randTag = ((CommentTag)rnd.Next(0, 9)).ToString();
 
                         var randYearOffset = rnd.Next(0, 4);
@@ -112,7 +110,7 @@ namespace BlogComment
                         var comment = new BlogComment
                         {
                             PostedAt = randDate,
-                            LastModified = DateTime.UtcNow.AddYears(-1),
+                            LastModified = DateTime.UtcNow,
                             Author = "Jon Doe",
                             Text = "Some text",
                             Tag = randTag

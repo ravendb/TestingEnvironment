@@ -50,6 +50,7 @@ namespace Counters
                     ReportInfo($"Incrementing counter {counterName} of document {docId}. ");
 
                     session.CountersFor(docId).Increment(counterName);
+                    session.CountersFor(docId).Increment("total-views");
                     session.SaveChanges();
                 }
 
@@ -70,6 +71,8 @@ namespace Counters
                     ReportInfo($"Incrementing counter {counterName} of document {docId}. ");
 
                     session.CountersFor(docId).Increment("likes");
+                    session.CountersFor(docId).Increment("total-views");
+
                     session.SaveChanges();
                 }
 
