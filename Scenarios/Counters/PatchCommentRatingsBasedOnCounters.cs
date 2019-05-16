@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations;
 using TestingEnvironment.Client;
@@ -21,23 +22,20 @@ namespace Counters
 
                 // ReSharper disable once ReplaceWithSingleCallToCount
                 var toUpdateCount = session.Query<BlogComment>()
-                    .Where(comment => comment.LastModified < now.AddHours(-1))
+                    .Where(comment => comment.LastModified < now.AddMinutes(-15))
                     .Count();
 
                 if (toUpdateCount == 0)
                 {
-                    ReportSuccess("Aborting patch. All docs have been updated in the last hour");
+                    ReportSuccess("Aborting patch. All docs have been updated in the last 15 minutes");
                     return;
                 }
 
                 ReportInfo($"Number of BlogComments to patch : {toUpdateCount}");
             }
 
-            // Where comment.LastModified < now.AddHours(-1), 
-            // patch 'Rating' property based on 'likes' and 'dislikes' counters
-
             var script = @"from BlogComments as comment 
-                           where comment.LastModified < '" + now.AddHours(-1).ToString("o") + @"'
+                           where comment.LastModified < '" + now.AddMinutes(-15).ToString("o") + @"'
                            update 
                            {
 	                           var likes = counter(comment, 'likes');
@@ -72,19 +70,23 @@ namespace Counters
 
             using (var session = DocumentStore.OpenSession())
             {
+                var almostNow = now - TimeSpan.FromSeconds(1);
                 // ReSharper disable once ReplaceWithSingleCallToCount
                 var count = session.Query<BlogComment>()
-                    .Where(comment => comment.LastModified < now.AddHours(-1))
+                    .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
+                    .Where(comment => comment.LastModified < almostNow)
                     .Count();
+
+
 
                 if (count != 0)
                 {
                     ReportFailure("Failed. Expected to have no BlogComment docs that have " +
-                                  $"LastModified < {now.AddHours(-1):o}, but found {count} such docs. ", null);
+                                  $"LastModified < {almostNow:o}, but found {count} such docs. ", null);
                 }
                 else
                 {
-                    ReportSuccess($"Success. All BlogComment docs now have LastModified >= {now.AddHours(-1):o}. ");
+                    ReportSuccess($"Success. All BlogComment docs now have LastModified >= {almostNow:o}. ");
                 }
             }
         }

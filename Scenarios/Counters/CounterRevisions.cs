@@ -21,6 +21,15 @@ namespace Counters
 
             var revisionConfig = dbRecord.Revisions;
 
+            if (revisionConfig == null)
+            {
+                revisionConfig = new RevisionsConfiguration();                
+            }
+            if (revisionConfig.Collections == null)
+            {
+                revisionConfig.Collections = new System.Collections.Generic.Dictionary<string, RevisionsCollectionConfiguration>();
+            }
+
             if (revisionConfig.Collections.ContainsKey("BlogComments") == false &&
                 (revisionConfig.Default == null || revisionConfig.Default.Disabled))
             {

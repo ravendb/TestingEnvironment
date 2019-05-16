@@ -29,13 +29,13 @@ namespace TestsRunner
 
                 var tests = new Type[]
                 {
-                    typeof(AuthorizationBundle.HospitalTest),                    
-                    typeof(BlogComment.Program.PutCommentsTest),
-                    typeof(CorruptedCasino.CasinoTest),
-                    typeof(Counters.PutCommentsTest),
-                    typeof(Counters.PutCountersOnCommentsBasedOnTopic),
-                    typeof(Counters.PutCountersOnCommentsRandomly),
-                    typeof(Counters.QueryBlogCommentsByTag),
+                    // typeof(AuthorizationBundle.HospitalTest),                    
+                    // typeof(BlogComment.Program.PutCommentsTest),
+                    // typeof(CorruptedCasino.CasinoTest),
+                     typeof(Counters.PutCommentsTest),
+                     typeof(Counters.PutCountersOnCommentsBasedOnTopic),
+                     typeof(Counters.PutCountersOnCommentsRandomly),
+                     typeof(Counters.QueryBlogCommentsByTag),
                     typeof(Counters.PatchCommentRatingsBasedOnCounters),
                     typeof(Counters.QueryBlogCommentsAndIncludeCounters),
                     typeof(Counters.LoadBlogCommentsAndIncludeCounters),
@@ -43,9 +43,9 @@ namespace TestsRunner
                     typeof(Counters.SubscribeToCounterChanges),
                     typeof(Counters.IndexQueryOnCounterNames),
                     typeof(Counters.CounterRevisions),
-                    typeof(MarineResearch.MarineResearchTest),
-                    // typeof(Subscriptions.FilterAndProjection),
-                    typeof(BackupAndRestore.BackupAndRestore)
+                    //typeof(MarineResearch.MarineResearchTest),
+                    //typeof(Subscriptions.FilterAndProjection),
+                    //typeof(BackupAndRestore.BackupAndRestore)
                 };
 
                 var ctorTypes = new Type[] { typeof(string), typeof(string) };
@@ -69,7 +69,7 @@ namespace TestsRunner
 
                 stdOut.WriteLine();
                 stdOut.WriteLine("Runing Tests:");
-                while (true)
+                // while (true)
                 {
                     foreach (var test in testsList)
                     {
