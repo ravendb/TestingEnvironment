@@ -10,7 +10,7 @@ namespace TestsRunner
     public class Program
     {
         public static void Main(string[] args)
-        {           
+        {
             (var stdOut, var orchestratorUrl) = HandleArgs(args);
 
             try
@@ -69,23 +69,41 @@ namespace TestsRunner
 
                 stdOut.WriteLine();
                 stdOut.WriteLine("Runing Tests:");
-                while(true)
+                while (true)
                 {
                     foreach (var test in testsList)
                     {
-                        var sp = Stopwatch.StartNew();
-                        stdOut.Write($"{DateTime.Now} {test.TestName}:{Environment.NewLine}Initialize...");
-                        test.Initialize();
-                        stdOut.Write($" RunTest...");
-                        test.RunTest();
-                        stdOut.Write($" Dispose...");
-                        test.Dispose();
-                        stdOut.WriteLine($" Done @ {sp.Elapsed}");
+                        var testDisposed = false;
+                        try
+                        {
+                            var sp = Stopwatch.StartNew();
+                            stdOut.Write($"{DateTime.Now} {test.TestName}:{Environment.NewLine}Initialize...");
+                            test.Initialize();
+                            stdOut.Write($" RunTest...");
+                            test.RunTest();
+                            stdOut.Write($" Dispose...");
+                            testDisposed = true;
+                            test.Dispose();
+                            stdOut.WriteLine($" Done @ {sp.Elapsed}");
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(Environment.NewLine + "Exception in Test: " + e);
+                            if (testDisposed == false)
+                            {
+                                try
+                                {
+                                    test.Dispose();
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine("Unable to dispose test after exception: " + e);
+                                }
+                            }
+                        }
                     }
                     stdOut.WriteLine();
                 }
-
-
             }
             finally
             {
