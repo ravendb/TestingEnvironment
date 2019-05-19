@@ -32,10 +32,10 @@ namespace BackupAndRestore
 
         private const int _numberOfCompareExchange = 10_000;
 
-        private static readonly TimeSpan _runTime = TimeSpan.FromMinutes(123);
+        private static readonly TimeSpan _runTime = TimeSpan.FromMinutes(30);
 
         private static List<MyBackup> MyBackupsList = new List<MyBackup>();
-        private static int NumOfRestoredBackups = 0;
+        private static List<MyRestoredDB> MyRestoreDbsList = new List<MyRestoredDB>();
 
         public enum RestoreResult
         {
@@ -93,9 +93,9 @@ namespace BackupAndRestore
             ReportInfo("Background tasks started");
             while (s.Elapsed < _runTime)
             {
-                if (NumOfRestoredBackups == 30)
+                if (MyRestoreDbsList.Count == 30)
                 {
-                    ReportInfo($"Restored {NumOfRestoredBackups} backups, breaking while...");
+                    ReportInfo($"Restored {MyRestoreDbsList.Count} backups, breaking while...");
                     break;
                 }
 
@@ -192,26 +192,32 @@ namespace BackupAndRestore
 
             cts.Cancel();
             await Task.WhenAll(tasks);
+
             CheckBackupStatuses();
+            ClearRestoredDatabases();
+
             ReportInfo($"Ran for {_runTime.Minutes} mins");
-            ReportSuccess("All our Backup and Restore tasks succeeded");
         }
 
         private void CheckBackupStatuses()
         {
+            var success = true;
             for (var i = 0; i < MyBackupsList.Count; i++)
             {
                 if (MyBackupsList[i].RestoreResult == RestoreResult.Failed)
                     ReportFailure("Got Failed Restore", null);
 
-                if (MyBackupsList[i].OperationStatus != OperationStatus.Completed)
+                if (MyBackupsList[i].OperationStatus == OperationStatus.Completed || MyBackupsList[i].OperationStatus == OperationStatus.Faulted)
                 {
+                    success = false;
                     ReportFailure($@"Got unsuccessful backup: 
                                     ID:{MyBackupsList[i].BackupTaskId}
                                     Path:{MyBackupsList[i].BackupPath}
                                     Status: {MyBackupsList[i].OperationStatus}", null);
                 }
             }
+            if (success)
+                ReportInfo("All our Backup and Restore tasks succeeded");
         }
 
         private static Task RunTask(Func<Task> task, CancellationTokenSource cts)
@@ -451,6 +457,31 @@ namespace BackupAndRestore
             }
         }
 
+        private void ClearRestoredDatabases()
+        {
+            ReportInfo("Clearing Restored Databases, Please clear the backup .ravendbdump files manually!");
+            var dbNames = new string[MyRestoreDbsList.Count];
+
+            for (var i = 0; i < MyRestoreDbsList.Count; i++)
+            {
+                dbNames[i] = MyRestoreDbsList[i].Name;
+            }
+
+            try
+            {
+                DocumentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(new DeleteDatabasesOperation.Parameters
+                {
+                    DatabaseNames = dbNames,
+                    HardDelete = true,
+                    TimeToWaitForConfirmation = TimeSpan.FromSeconds(300)
+                }));
+            }
+            catch
+            {
+                ReportInfo("Failed to clear the DBs!");
+            }
+        }
+
         private async Task AddDocs(int actorsCount, int directorsCount, int moviesCount)
         {
             using (var bulkInsert = DocumentStore.BulkInsert())
@@ -519,6 +550,12 @@ namespace BackupAndRestore
                 await DocumentStore.Operations.SendAsync(
                     new PutCompareExchangeValueOperation<int>(new string(Enumerable.Repeat(_chars, 255).Select(x => x[rnd.Next(x.Length)]).ToArray()), rnd.Next(0, int.MaxValue), 0));
             }
+        }
+
+        public class MyRestoredDB
+        {
+            public string Name { get; set; }
+            public string NodeTag { get; set; }
         }
 
         public class MyBackup
