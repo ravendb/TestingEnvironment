@@ -39,8 +39,8 @@ if ( $cleanflag -eq "clean-all" -or $cleanflag -eq "clean-all-exclude-db" )
     }
     elseif ( $cleanflag -eq "clean-all-exclude-db" )
     {
-        Write-Host "[TE] Deleting directory ${prefix}/${ravendbdir}"
-        del -Recurse "${prefix}/${ravendbdir}" -ErrorAction Ignore
+        Write-Host "[TE] Deleting directory ${prefix}\${ravendbdir}"
+        del -Recurse "${prefix}\${ravendbdir}" -ErrorAction Ignore
     }
 
     Write-Host "[TE] Creating directory ${prefix}..."

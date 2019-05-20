@@ -153,7 +153,7 @@ namespace TestingEnvironment.Orchestrator
             {
                 session.Advanced.UseOptimisticConcurrency = true;
                 var now = DateTime.UtcNow;
-                session.Store(new TestInfo
+                var testInfo = new TestInfo
                 {
                     Name = testName,
                     ExtendedName = $"{testName} ({now})",
@@ -162,7 +162,10 @@ namespace TestingEnvironment.Orchestrator
                     Start = now,
                     Events = new List<EventInfoWithExceptionAsString>(),
                     Config = testConfig //record what servers we are working with in this particular test
-                });
+                };
+                if (author.Equals("TestRunner"))
+                    testInfo.Id = "TestRunner/";
+                session.Store(testInfo);
                 session.SaveChanges();
             }
 

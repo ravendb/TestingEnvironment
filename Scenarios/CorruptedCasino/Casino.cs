@@ -128,7 +128,7 @@ namespace CorruptedCasino
                     ["Bets"] = new RevisionsCollectionConfiguration()
                 }
             };
-
+            
             await Store.Maintenance.SendAsync(new ConfigureRevisionsOperation(config));
         }
 

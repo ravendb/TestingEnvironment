@@ -211,7 +211,7 @@ namespace MarineResearch
         {
             var dateTime = new DateTime(2019, 1, 1);
             var list = new List<Measurement>();
-            for (var i = 0; i < 2; i++)
+            for (var i = 0; i < 32; i++)
             {
                 var requestExecutor = DocumentStore.GetRequestExecutor();
                 using (var session = DocumentStore.OpenSession())
@@ -242,7 +242,7 @@ namespace MarineResearch
                     }
                 }
 
-                Thread.Sleep(60 * 1000);
+                Thread.Sleep(2000);
             }
 
             return list;

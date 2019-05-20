@@ -95,6 +95,17 @@ namespace TestingEnvironment.Client
             };
             return _orchestratorClient.Post<EventResponse>($"/report?testName={TestName}", eventInfoWithExceptionAsString);
         }
+
+        protected bool SetStrategy(string strategy)
+        {
+            // ReportEvent(new EventInfo { Message = $"Setting strategy to {strategy}" });
+            var rc = _orchestratorClient.Put<bool>($"/config-selectors?strategyName={strategy}");
+            if (rc)
+                ReportSuccess("Successfully set");
+            else
+                ReportFailure("Failed to set", new Exception($"Failed to /config-selectors?strategyName={strategy}"));
+            return rc;
+        }
             
 
         public virtual void Dispose()

@@ -25,14 +25,14 @@ namespace BackupAndRestore
         private const string _charsOnly = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         private const string _backupPath = @"C:\backups";
 
-        private const int _numberOfActors = 500_000;
+        private const int _numberOfActors = 150_000;
         private const int _numberOfDirectors = 100_000;
-        private const int _numberOfMovies = 1_500_000;
+        private const int _numberOfMovies = 250_000;
         private const int _numberOfDocuments = _numberOfActors + _numberOfDirectors + _numberOfMovies;
 
-        private const int _numberOfCompareExchange = 10_000;
+        private const int _numberOfCompareExchange = 2_500;
 
-        private static readonly TimeSpan _runTime = TimeSpan.FromMinutes(30);
+        private static readonly TimeSpan _runTime = TimeSpan.FromMinutes(9);
 
         private static List<MyBackup> MyBackupsList = new List<MyBackup>();
         private static List<MyRestoredDB> MyRestoreDbsList = new List<MyRestoredDB>();
@@ -337,11 +337,13 @@ namespace BackupAndRestore
         {
             var rnd = new Random();
             var from = rnd.Next(0, _numberOfCompareExchange - 256 - 1);
-            var list = DocumentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<int>("", from, 256));
+            var list = DocumentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<string>("", from, 256));
 
             foreach (var key in list.Result.Keys)
             {
-                var val = list.Result[key].Value;
+                if (int.TryParse(list.Result[key].Value, out var val) == false)
+                    continue;
+                
                 val += 1;
 
                 await DocumentStore.Operations.SendAsync(

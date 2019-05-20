@@ -7,6 +7,17 @@ using TestingEnvironment.Client;
 
 namespace TestsRunner
 {
+    public class StrategySet : BaseTest
+    {
+        public StrategySet(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "TestRunner")
+        { }
+
+        public override void RunActualTest()
+        {
+            SetStrategy("FirstClusterRandomDatabaseSelector");
+        }
+    }
+
     public class Program
     {
         public static void Main(string[] args)
@@ -25,6 +36,15 @@ namespace TestsRunner
                 stdOut.WriteLine($"OrcestratorUrl: {orchestratorUrl}");
                 stdOut.WriteLine();
                 stdOut.Flush();
+
+                stdOut.Write("Setting Strategy: FirstClusterRandomDatabaseStrategy");
+                using (var client = new StrategySet(orchestratorUrl, "StrategySet"))
+                {
+                    client.Initialize();
+                    client.RunTest();
+                }
+                stdOut.Flush();
+
                 stdOut.Write("Loading Tests: ");
 
                 var tests = new Type[]
@@ -45,7 +65,7 @@ namespace TestsRunner
                    typeof(Counters.CounterRevisions),
                    typeof(MarineResearch.MarineResearchTest),
                    // typeof(Subscriptions.FilterAndProjection),
-                   // typeof(BackupAndRestore.BackupAndRestore)
+                   typeof(BackupAndRestore.BackupAndRestore)
                 };
 
                 var ctorTypes = new Type[] { typeof(string), typeof(string) };
@@ -88,7 +108,7 @@ namespace TestsRunner
                         }
                         catch (Exception e)
                         {
-                            Console.WriteLine(Environment.NewLine + "Exception in Test: " + e);
+                            stdOut.WriteLine(Environment.NewLine + "Exception in Test: " + e);
                             if (testDisposed == false)
                             {
                                 try
@@ -97,7 +117,7 @@ namespace TestsRunner
                                 }
                                 catch (Exception ex)
                                 {
-                                    Console.WriteLine("Unable to dispose test after exception: " + e);
+                                    stdOut.WriteLine("Unable to dispose test after exception: " + e);
                                 }
                             }
                         }
