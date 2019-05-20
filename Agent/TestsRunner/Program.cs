@@ -37,7 +37,7 @@ namespace TestsRunner
                 stdOut.WriteLine();
                 stdOut.Flush();
 
-                stdOut.Write("Setting Strategy: FirstClusterRandomDatabaseStrategy");
+                stdOut.WriteLine("Setting Strategy: FirstClusterRandomDatabaseStrategy");
                 using (var client = new StrategySet(orchestratorUrl, "StrategySet"))
                 {
                     client.Initialize();

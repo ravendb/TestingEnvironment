@@ -55,8 +55,7 @@ namespace TestingEnvironment.Orchestrator
             //PUT http://localhost:5000/config-selectors?strategyName=FirstClusterSelector
             Put("/config-selectors", @params =>
             {
-                var isSucceeded = Orchestrator.Instance.TrySetConfigSelectorStrategy(Uri.UnescapeDataString((string) Request.Query.strategyName));
-                return isSucceeded ? HttpStatusCode.OK : HttpStatusCode.NotFound;
+                return Orchestrator.Instance.TrySetConfigSelectorStrategy(Uri.UnescapeDataString((string)Request.Query.strategyName));
             });
         }
     }

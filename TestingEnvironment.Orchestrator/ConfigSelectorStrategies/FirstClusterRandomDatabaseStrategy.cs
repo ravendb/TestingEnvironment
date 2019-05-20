@@ -17,7 +17,7 @@ namespace TestingEnvironment.Orchestrator.ConfigSelectorStrategies
             if (configuration.Clusters?.Length == 0)
                 throw new InvalidOperationException("Must be at least one cluster configured!");
 
-            var rnd = new Random().Next(1, configuration.Databases.Length - 1);
+            var rnd = new Random().Next(1, configuration.Databases.Length);
 
             _nextConfigLazy = new Lazy<TestConfig>(() => new TestConfig
             {
@@ -28,7 +28,7 @@ namespace TestingEnvironment.Orchestrator.ConfigSelectorStrategies
         }
 
         public string Name => "FirstClusterRandomDatabaseSelector";
-        public string Description => "Simply selects as configuration the first database and the first cluster from the settings file";
+        public string Description => "Randomly selects from configuration a database belong to the first cluster from the settings file (excluding the first defined db)";
 
         public void OnBeforeRegisterTest(IDocumentStore store)
         {

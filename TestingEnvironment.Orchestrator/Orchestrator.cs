@@ -62,10 +62,9 @@ namespace TestingEnvironment.Orchestrator
                 throw new InvalidOperationException("Must be at least one database configured!");
             }
 
-            Console.WriteLine("=====================================================");
             Console.WriteLine($"EmbeddedServerUrl:{_config.EmbeddedServerUrl}");
             Console.WriteLine($"OrchestratorUrl:{_config.OrchestratorUrl}");
-            Console.WriteLine("=====================================================");
+            Console.Write("Starting Embedded RavenDB... ");
 
 
             foreach (var serverInfo in _config.LocalRavenServers ?? Enumerable.Empty<ServerInfo>())
@@ -83,6 +82,8 @@ namespace TestingEnvironment.Orchestrator
             new LatestTestByName().Execute(_reportingDocumentStore);
             new FailTests().Execute(_reportingDocumentStore);
             new FailTestsComplete().Execute(_reportingDocumentStore);
+
+            Console.WriteLine("Done.");
 
             if (_config.Clusters == null || _config.Clusters.Length == 0)
             {

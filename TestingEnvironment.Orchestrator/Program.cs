@@ -14,6 +14,12 @@ namespace TestingEnvironment.Orchestrator
         {
             Console.WriteLine("Running RavenDB Test Orchestrator");
             Console.WriteLine("=================================");
+            var _orch = Orchestrator.Instance;
+            var strategy = "FirstClusterRandomDatabaseSelector";
+            if (_orch.TrySetConfigSelectorStrategy(strategy))
+                Console.WriteLine($"Set default strategy to: {strategy}");
+            else
+                throw new InvalidOperationException($"Cannot set strategy to {strategy}");
             CreateWebHostBuilder(args).Build().Run();
         }
 

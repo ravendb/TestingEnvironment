@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents;
 using ServiceStack;
 using TestingEnvironment.Common;
+using System.Net;
 
 namespace TestingEnvironment.Client
 {
@@ -98,8 +99,8 @@ namespace TestingEnvironment.Client
 
         protected bool SetStrategy(string strategy)
         {
-            // ReportEvent(new EventInfo { Message = $"Setting strategy to {strategy}" });
-            var rc = _orchestratorClient.Put<bool>($"/config-selectors?strategyName={strategy}");
+            ReportEvent(new EventInfo { Message = $"Setting strategy to {strategy}" });
+            var rc = _orchestratorClient.Put<bool>($"/config-selectors?strategyName={Uri.EscapeDataString(strategy)}", "");
             if (rc)
                 ReportSuccess("Successfully set");
             else
