@@ -197,6 +197,7 @@ namespace BackupAndRestore
             ClearRestoredDatabases();
 
             ReportInfo($"Ran for {_runTime.Minutes} mins");
+            ReportSuccess("BackupAndRestore Test Finished.");
         }
 
         private void CheckBackupStatuses()
@@ -207,7 +208,7 @@ namespace BackupAndRestore
                 if (MyBackupsList[i].RestoreResult == RestoreResult.Failed)
                     ReportFailure("Got Failed Restore", null);
 
-                if (MyBackupsList[i].OperationStatus == OperationStatus.Completed || MyBackupsList[i].OperationStatus == OperationStatus.Faulted)
+                if (MyBackupsList[i].OperationStatus == OperationStatus.Faulted)
                 {
                     success = false;
                     ReportFailure($@"Got unsuccessful backup: 
@@ -229,7 +230,15 @@ namespace BackupAndRestore
                 while (cts.IsCancellationRequested == false)
                 {
                     var num = rnd.Next(50, 3000);
-                    await Task.Delay(num, cts.Token);
+
+                    try
+                    {
+                        await Task.Delay(num, cts.Token);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        return;
+                    }
 
                     if (cts.IsCancellationRequested)
                         return;
@@ -461,6 +470,12 @@ namespace BackupAndRestore
 
         private void ClearRestoredDatabases()
         {
+            if (MyRestoreDbsList.Count == 0)
+            {
+                ReportInfo("No Restored Databases to clear.");
+                return;
+            }
+
             ReportInfo("Clearing Restored Databases, Please clear the backup .ravendbdump files manually!");
             var dbNames = new string[MyRestoreDbsList.Count];
 
