@@ -13,10 +13,6 @@ namespace CorruptedCasino
 
         public static readonly int NamePoolCount = 500;
 
-        [ThreadStatic] private static Random _rand;
-
-        private static Random Rand => _rand ?? (_rand = new Random());
-
         static UserOperations()
         {
             NamePool = new string[NamePoolCount];
@@ -57,10 +53,10 @@ namespace CorruptedCasino
         {
             using (var session = Casino.GetClusterSessionAsync)
             {
-                var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(email);
+                var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(email).ConfigureAwait(false);
                 if (result?.Value != null)
                 {
-                    return await session.LoadAsync<User>(result.Value);
+                    return await session.LoadAsync<User>(result.Value).ConfigureAwait(false);
                 }
             }
 
@@ -73,9 +69,9 @@ namespace CorruptedCasino
 
             using (var session = Casino.GetClusterSessionAsync)
             {
-                await session.StoreAsync(user);
+                await session.StoreAsync(user).ConfigureAwait(false);
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue(user.Email, user.Id);
-                await session.SaveChangesAsync();
+                await session.SaveChangesAsync().ConfigureAwait(false);
             }
 
             return user;
@@ -85,10 +81,10 @@ namespace CorruptedCasino
         {
             using (var session = Casino.GetClusterSessionAsync)
             {
-                var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(email);
+                var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(email).ConfigureAwait(false);
                 session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(email, result.Index);
                 session.Delete(result.Value);
-                await session.SaveChangesAsync();
+                await session.SaveChangesAsync().ConfigureAwait(false);
             }
         }
 
@@ -98,7 +94,7 @@ namespace CorruptedCasino
             using (var session = Casino.GetSessionAsync)
             {
                 session.Advanced.Attachments.Store(id, "Avatar", stream);
-                await session.SaveChangesAsync();
+                await session.SaveChangesAsync().ConfigureAwait(false);
             }
         }
     }
@@ -119,7 +115,7 @@ namespace CorruptedCasino
 
             using (var session = Casino.GetSessionAsync)
             {
-                var user = await session.LoadAsync<User>(Id);
+                var user = await session.LoadAsync<User>(Id).ConfigureAwait(false);
                 if (user.Credit < price)
                     throw new InsufficientFunds("Not enough credit");
 
@@ -132,16 +128,16 @@ namespace CorruptedCasino
                     BetStatus = Bet.Status.Active
                 };
 
-                await session.StoreAsync(bet);
+                await session.StoreAsync(bet).ConfigureAwait(false);
                 session.Advanced.GetMetadataFor(bet)[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMinutes(10);
 
                 user.Credit -= price;
                 user.Bets.Add(bet.Id);
 
-                await Lottery.ValidateOpen(session, lotteryId);
+                await Lottery.ValidateOpen(session, lotteryId).ConfigureAwait(false);
                 session.CountersFor(lotteryId).Increment(DateTime.UtcNow.ToString("yyyy MMMM dd hh:mm"));
 
-                await session.SaveChangesAsync();
+                await session.SaveChangesAsync().ConfigureAwait(false);
             }
         }
 
@@ -152,10 +148,10 @@ namespace CorruptedCasino
 
             using (var session = Casino.GetSessionAsync)
             {
-                var bet = await session.LoadAsync<Bet>(betId);
+                var bet = await session.LoadAsync<Bet>(betId).ConfigureAwait(false);
 
-                var user = await session.LoadAsync<User>(Id);
-                await Lottery.ValidateOpen(session, bet.LotteryId);
+                var user = await session.LoadAsync<User>(Id).ConfigureAwait(false);
+                await Lottery.ValidateOpen(session, bet.LotteryId).ConfigureAwait(false);
 
                 user.Credit += bet.Price;
                 if (user.Credit < price)
@@ -165,9 +161,9 @@ namespace CorruptedCasino
                 bet.Numbers = numbers;
 
                 user.Credit -= price;
-                await session.StoreAsync(bet);
-                await session.StoreAsync(user);
-                await session.SaveChangesAsync();
+                await session.StoreAsync(bet).ConfigureAwait(false);
+                await session.StoreAsync(user).ConfigureAwait(false);
+                await session.SaveChangesAsync().ConfigureAwait(false);
             }
         }
 
@@ -175,19 +171,19 @@ namespace CorruptedCasino
         {
             using (var session = Casino.GetSessionAsync)
             {
-                var user = await session.LoadAsync<User>(Id);
-                var bet = await session.LoadAsync<Bet>(betId);
+                var user = await session.LoadAsync<User>(Id).ConfigureAwait(false);
+                var bet = await session.LoadAsync<Bet>(betId).ConfigureAwait(false);
 
-                await Lottery.ValidateOpen(session, bet.LotteryId);
+                await Lottery.ValidateOpen(session, bet.LotteryId).ConfigureAwait(false);
 
                 bet.BetStatus = Bet.Status.Deleted;
 
                 if (user.Bets.Remove(betId))
                 {
                     user.Credit += bet.Price;
-                    await session.StoreAsync(bet);
-                    await session.StoreAsync(user);
-                    await session.SaveChangesAsync();
+                    await session.StoreAsync(bet).ConfigureAwait(false);
+                    await session.StoreAsync(user).ConfigureAwait(false);
+                    await session.SaveChangesAsync().ConfigureAwait(false);
                 }
             }
         }

@@ -34,8 +34,8 @@ namespace BackupAndRestore
 
         private static readonly TimeSpan _runTime = TimeSpan.FromMinutes(9);
 
-        private static List<MyBackup> MyBackupsList = new List<MyBackup>();
-        private static List<MyRestoredDB> MyRestoreDbsList = new List<MyRestoredDB>();
+        private static readonly List<MyBackup> MyBackupsList = new List<MyBackup>();
+        private static readonly List<MyRestoredDB> MyRestoreDbsList = new List<MyRestoredDB>();
 
         public enum RestoreResult
         {
@@ -64,7 +64,7 @@ namespace BackupAndRestore
                 if (docsCount < _numberOfDocuments)
                 {
                     ReportInfo("Creating Documents");
-                    await AddDocs(actorsCount, directorsCount, moviesCount);
+                    await AddDocs(actorsCount, directorsCount, moviesCount).ConfigureAwait(false);
                 }
                 else
                 {
@@ -75,7 +75,7 @@ namespace BackupAndRestore
             if (DocumentStore.Maintenance.Send(new GetDetailedStatisticsOperation()).CountOfCompareExchange < _numberOfCompareExchange)
             {
                 ReportInfo("Adding Compare Exchange");
-                await AddCompareExchange();
+                await AddCompareExchange().ConfigureAwait(false);
             }
             else
             {
@@ -128,7 +128,7 @@ namespace BackupAndRestore
                         {
                             var backup = MyBackupsList.First(x => x.IsBackupCompleted == false);
                             ReportInfo("Started a full Backup");
-                            await RunBackupTask(backup.BackupTaskId);
+                            await RunBackupTask(backup.BackupTaskId).ConfigureAwait(false);
                             ReportInfo($"Backed up taskID: {backup.BackupTaskId}, Backup Path: {backup.BackupPath}");
                         }
                         catch
@@ -145,7 +145,7 @@ namespace BackupAndRestore
                         {
                             var restore = MyBackupsList.First(x => (x.OperationStatus == OperationStatus.Completed && x.RestoreResult == RestoreResult.None));
                             ReportInfo("Started a restore");
-                            await RestoreBackup(restore);
+                            await RestoreBackup(restore).ConfigureAwait(false);
                             ReportInfo($"Restored backup task: {restore.BackupTaskId} with path: {restore.BackupPath}");
                         }
                         catch
@@ -157,31 +157,31 @@ namespace BackupAndRestore
                 else if (14 <= num && num < 29)
                 {
                     var waitTime = rnd.Next(50, 1000);
-                    await Task.Delay(waitTime, cts.Token);
+                    await Task.Delay(waitTime, cts.Token).ConfigureAwait(false);
                     //ReportInfo($"Waited for {waitTime} ms, Starting modify Actors");
-                    await ModifyActors();
+                    await ModifyActors().ConfigureAwait(false);
 
                 }
                 else if (29 <= num && num < 44)
                 {
                     var waitTime = rnd.Next(50, 1000);
-                    await Task.Delay(waitTime, cts.Token);
+                    await Task.Delay(waitTime, cts.Token).ConfigureAwait(false);
                     //ReportInfo($"Waited for {waitTime} ms, Starting modify Directors");
-                    await ModifyDirectors();
+                    await ModifyDirectors().ConfigureAwait(false);
                 }
                 else if (44 <= num && num < 59)
                 {
                     var waitTime = rnd.Next(50, 1000);
-                    await Task.Delay(waitTime, cts.Token);
+                    await Task.Delay(waitTime, cts.Token).ConfigureAwait(false);
                    // ReportInfo($"Waited for {waitTime} ms, Starting modify Movies");
-                    await ModifyMovies();
+                    await ModifyMovies().ConfigureAwait(false);
                 }
                 else if (59 <= num && num < 74)
                 {
                     var waitTime = rnd.Next(50, 1000);
-                    await Task.Delay(waitTime, cts.Token);
+                    await Task.Delay(waitTime, cts.Token).ConfigureAwait(false);
                   //  ReportInfo($"Waited for {waitTime} ms, Starting modify CompareExchange");
-                    await ModifyCompareExchange();
+                    await ModifyCompareExchange().ConfigureAwait(false);
                 }
             }
 
@@ -191,7 +191,7 @@ namespace BackupAndRestore
             s.Stop();
 
             cts.Cancel();
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
 
             CheckBackupStatuses();
             ClearRestoredDatabases();
@@ -233,7 +233,7 @@ namespace BackupAndRestore
 
                     try
                     {
-                        await Task.Delay(num, cts.Token);
+                        await Task.Delay(num, cts.Token).ConfigureAwait(false);
                     }
                     catch (TaskCanceledException)
                     {
@@ -243,7 +243,7 @@ namespace BackupAndRestore
                     if (cts.IsCancellationRequested)
                         return;
 
-                    await task();
+                    await task().ConfigureAwait(false);
                 }
             });
         }
@@ -256,7 +256,7 @@ namespace BackupAndRestore
             using (var s = DocumentStore.OpenAsyncSession())
             {
                 var from = rnd.Next(0, _numberOfActors - docsToModify - 1);
-                var actors = (await s.Advanced.LoadStartingWithAsync<Actor>(nameof(Actor), null, from, docsToModify)).ToList();
+                var actors = (await s.Advanced.LoadStartingWithAsync<Actor>(nameof(Actor), null, from, docsToModify).ConfigureAwait(false)).ToList();
 
                 foreach (var a in actors)
                 {
@@ -269,10 +269,10 @@ namespace BackupAndRestore
                     else
                         a.FullName = $"{new string(Enumerable.Repeat(_charsOnly, rnd.Next(2, 6)).Select(x => x[rnd.Next(x.Length)]).ToArray())} {new string(Enumerable.Repeat(_charsOnly, rnd.Next(2, 6)).Select(x => x[rnd.Next(x.Length)]).ToArray())}";
 
-                    await s.StoreAsync(a);
+                    await s.StoreAsync(a).ConfigureAwait(false);
                 }
 
-                await s.SaveChangesAsync();
+                await s.SaveChangesAsync().ConfigureAwait(false);
             }
         }
 
@@ -284,7 +284,7 @@ namespace BackupAndRestore
             using (var s = DocumentStore.OpenAsyncSession())
             {
                 var from = rnd.Next(0, _numberOfDirectors - docsToModify - 1);
-                var directors = (await s.Advanced.LoadStartingWithAsync<Director>(nameof(Director), null, from, docsToModify))
+                var directors = (await s.Advanced.LoadStartingWithAsync<Director>(nameof(Director), null, from, docsToModify).ConfigureAwait(false))
                     .ToList();
 
                 foreach (var d in directors)
@@ -299,10 +299,10 @@ namespace BackupAndRestore
                         d.FullName =
                             $"{new string(Enumerable.Repeat(_charsOnly, rnd.Next(2, 6)).Select(x => x[rnd.Next(x.Length)]).ToArray())} {new string(Enumerable.Repeat(_charsOnly, rnd.Next(2, 6)).Select(x => x[rnd.Next(x.Length)]).ToArray())}";
 
-                    await s.StoreAsync(d);
+                    await s.StoreAsync(d).ConfigureAwait(false);
                 }
 
-                await s.SaveChangesAsync();
+                await s.SaveChangesAsync().ConfigureAwait(false);
             }
         }
 
@@ -314,7 +314,7 @@ namespace BackupAndRestore
             using (var s = DocumentStore.OpenAsyncSession())
             {
                 var from = rnd.Next(0, _numberOfMovies - docsToModify - 1);
-                var movies = (await s.Advanced.LoadStartingWithAsync<Movie>(nameof(Movie), null, from, docsToModify))
+                var movies = (await s.Advanced.LoadStartingWithAsync<Movie>(nameof(Movie), null, from, docsToModify).ConfigureAwait(false))
                     .ToList();
 
                 foreach (var m in movies)
@@ -335,10 +335,10 @@ namespace BackupAndRestore
                             m.ActorsIds.RemoveAt(0);
                     }
 
-                    await s.StoreAsync(m);
+                    await s.StoreAsync(m).ConfigureAwait(false);
                 }
 
-                await s.SaveChangesAsync();
+                await s.SaveChangesAsync().ConfigureAwait(false);
             }
         }
 
@@ -356,7 +356,7 @@ namespace BackupAndRestore
                 val += 1;
 
                 await DocumentStore.Operations.SendAsync(
-                    new PutCompareExchangeValueOperation<int>(key, val, 0));
+                    new PutCompareExchangeValueOperation<int>(key, val, 0)).ConfigureAwait(false);
             }
         }
 
@@ -377,18 +377,18 @@ namespace BackupAndRestore
                 Name = backupName
             };
 
-            var result = await DocumentStore.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
+            var result = await DocumentStore.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig)).ConfigureAwait(false);
             return result.TaskId;
         }
 
         private async Task RunBackupTask(long backupTaskId)
         {
-            await DocumentStore.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+            await DocumentStore.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId)).ConfigureAwait(false);
             PeriodicBackupStatus backupStatus = DocumentStore.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
 
             while (backupStatus == null)
             {
-                await Task.Delay(2000);
+                await Task.Delay(2000).ConfigureAwait(false);
                 backupStatus = DocumentStore.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
             }
 
@@ -436,19 +436,19 @@ namespace BackupAndRestore
                     var re = DocumentStore.GetRequestExecutor(DocumentStore.Database);
                     var restoreBackupTaskCommand = restoreBackupTask.GetCommand(DocumentStore.Conventions, session.Advanced.Context);
                     await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
-                        null, session.Advanced.Context, restoreBackupTaskCommand, shouldRetry: false);
+                        null, session.Advanced.Context, restoreBackupTaskCommand, shouldRetry: false).ConfigureAwait(false);
                     
                     var getOperationStateTask = new GetOperationStateOperation(restoreBackupTaskCommand.Result.OperationId);
                     var getOperationStateTaskCommand = getOperationStateTask.GetCommand(DocumentStore.Conventions, session.Advanced.Context);
 
                     await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
-                        null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false);
+                        null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false).ConfigureAwait(false);
 
                     while (getOperationStateTaskCommand.Result.Status == OperationStatus.InProgress)
                     {
-                        await Task.Delay(2000);
+                        await Task.Delay(2000).ConfigureAwait(false);
                         await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
-                            null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false);
+                            null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false).ConfigureAwait(false);
                     }
                 }
                 catch (Exception e)
@@ -514,7 +514,7 @@ namespace BackupAndRestore
                         Id = $"Actor/{i}",
                         FullName = new string(Enumerable.Repeat(_charsOnly, rnd.Next(2, 6)).Select(x => x[rnd.Next(x.Length)]).ToArray()),
                         Age = rnd.Next(1, 99)
-                    }, $"Actor/{i}");
+                    }, $"Actor/{i}").ConfigureAwait(false);
                     i++;
                 }
                 ReportInfo($"Added {i - actorsCount} Actors");
@@ -525,7 +525,7 @@ namespace BackupAndRestore
                     {
                         FullName = new string(Enumerable.Repeat(_charsOnly, rnd.Next(2, 6)).Select(x => x[rnd.Next(x.Length)]).ToArray()),
                         Age = rnd.Next(1, 99)
-                    }, $"Director/{i}");
+                    }, $"Director/{i}").ConfigureAwait(false);
                     i++;
                 }
                 ReportInfo($"Added {i - directorsCount} Directors");
@@ -534,9 +534,9 @@ namespace BackupAndRestore
                 {
                     var enumerator = await s
                         .Advanced
-                        .StreamAsync<Actor>("Actor/");
+                        .StreamAsync<Actor>("Actor/").ConfigureAwait(false);
 
-                    while (await enumerator.MoveNextAsync())
+                    while (await enumerator.MoveNextAsync().ConfigureAwait(false))
                         actorsList.Add(enumerator.Current.Document);
 
                     i = moviesCount;
@@ -550,7 +550,7 @@ namespace BackupAndRestore
                             Rating = rnd.NextDouble() * 10,
                             ActorsIds = actorsList.GetRange(rnd.Next(0, 99_964), rnd.Next(1, 32)).ConvertAll(x => x.Id),
                             Description = new string(Enumerable.Repeat(_chars, 255).Select(x => x[rnd.Next(x.Length)]).ToArray())
-                        }, $"Movie/{i}");
+                        }, $"Movie/{i}").ConfigureAwait(false);
                         i++;
                     }
                     ReportInfo($"Added {i - moviesCount} Movies");
@@ -565,7 +565,7 @@ namespace BackupAndRestore
             for (var i = 0; i < _numberOfCompareExchange; i++)
             {
                 await DocumentStore.Operations.SendAsync(
-                    new PutCompareExchangeValueOperation<int>(new string(Enumerable.Repeat(_chars, 255).Select(x => x[rnd.Next(x.Length)]).ToArray()), rnd.Next(0, int.MaxValue), 0));
+                    new PutCompareExchangeValueOperation<int>(new string(Enumerable.Repeat(_chars, 255).Select(x => x[rnd.Next(x.Length)]).ToArray()), rnd.Next(0, int.MaxValue), 0)).ConfigureAwait(false);
             }
         }
 

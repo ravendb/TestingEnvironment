@@ -5,9 +5,9 @@ namespace CorruptedCasino
 {
     class Program
     {
-        static async Task Main(string[] args)
+        static async Task Main()
         {
-            await Casino.Bootstrap();
+            await Casino.Bootstrap().ConfigureAwait(false);
             Casino.Instance.RunActualTest();
             Console.ReadLine();
         }

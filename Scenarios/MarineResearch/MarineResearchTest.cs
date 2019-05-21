@@ -28,7 +28,7 @@ namespace MarineResearch
         {
             using (DocumentStore.Initialize())
             {
-                RunActualTestAsync().GetAwaiter().GetResult();
+                RunActualTestAsync().ConfigureAwait(false);
             }
         }
 
@@ -40,11 +40,11 @@ namespace MarineResearch
             var outputCollection = $"DailyReport{guid}";
             var indexName = $"Index{guid}";
 
-            await CreateIndex(indexName, collection, outputCollection);
+            await CreateIndex(indexName, collection, outputCollection).ConfigureAwait(false);
 
-            var expected = await MeasurementUploading(collection);
+            var expected = await MeasurementUploading(collection).ConfigureAwait(false);
 
-            var csvStream = await ExportCsvDailyReport(outputCollection);
+            var csvStream = await ExportCsvDailyReport(outputCollection).ConfigureAwait(false);
             var _ = ToList(csvStream); // actual
 
             var groupBy = GroupByTime(expected);
@@ -145,8 +145,8 @@ namespace MarineResearch
             var url =
                 $"{DocumentStore.Urls[0]}/databases/{DocumentStore.Database}/streams/queries?format=csv&query={Uri.EscapeDataString(query)}";
             Stream stream = null;
-            async Task Action() => stream = await client.GetStreamAsync(url);
-            await Retry(5, Action, "export daily result to csv");
+            async Task Action() => stream = await client.GetStreamAsync(url).ConfigureAwait(false);
+            await Retry(5, Action, "export daily result to csv").ConfigureAwait(false);
             return stream;
         }
 
@@ -159,7 +159,7 @@ namespace MarineResearch
                 {
                     ReportInfo($"Try to {description} ({count} of {nTimes})");
 
-                    await action();
+                    await action().ConfigureAwait(false);
 
                     ReportInfo($"Succeed to {description}");
                     break;
@@ -201,10 +201,10 @@ namespace MarineResearch
                                 Salinity = g.Average(x => x.Salinity)
                             }",
                     OutputReduceToCollection = outputCollection
-                }));
+                })).ConfigureAwait(false);
             }
 
-            await Retry(5, Action, "add index");
+            await Retry(5, Action, "add index").ConfigureAwait(false);
         }
 
         private async Task<List<Measurement>> MeasurementUploading(string collection)
@@ -224,7 +224,7 @@ namespace MarineResearch
                         list.AddRange(dailyMeasurements);
 
                         var getOperationIdCommand = new GetNextOperationIdCommand();
-                        await requestExecutor.ExecuteAsync(getOperationIdCommand, session.Advanced.Context);
+                        await requestExecutor.ExecuteAsync(getOperationIdCommand, session.Advanced.Context).ConfigureAwait(false);
                         var operationId = getOperationIdCommand.Result;
 
                         memoryStream.Seek(0, SeekOrigin.Begin);
@@ -232,11 +232,11 @@ namespace MarineResearch
 
                         async Task Action()
                         {
-                            await requestExecutor.ExecuteAsync(csvImportCommand, session.Advanced.Context);
+                            await requestExecutor.ExecuteAsync(csvImportCommand, session.Advanced.Context).ConfigureAwait(false);
                             var operation = new Operation(requestExecutor, () => DocumentStore.Changes(), DocumentStore.Conventions, operationId);
-                            await operation.WaitForCompletionAsync();
+                            await operation.WaitForCompletionAsync().ConfigureAwait(false);
                         }
-                        await Retry(5, Action, "import csv");
+                        await Retry(5, Action, "import csv").ConfigureAwait(false);
 
                         memoryStream.Seek(0, SeekOrigin.Begin);
                     }

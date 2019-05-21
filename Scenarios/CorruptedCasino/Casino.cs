@@ -21,7 +21,7 @@ namespace CorruptedCasino
     {
         public static Casino Instance;
 
-        private static bool Local = false;
+        private static readonly bool Local = false;
 
         //static Casino()
         //{
@@ -101,8 +101,8 @@ namespace CorruptedCasino
                 // ignore
             }
 
-            await ConfigureExpiration();
-            await ConfigureRevisions();
+            await ConfigureExpiration().ConfigureAwait(false);
+            await ConfigureRevisions().ConfigureAwait(false);
         }
 
         private static async Task ConfigureExpiration()
@@ -111,7 +111,7 @@ namespace CorruptedCasino
             {
                 Disabled = false,
                 DeleteFrequencyInSec = 600
-            }));
+            })).ConfigureAwait(false);
         }
 
         private static async Task ConfigureRevisions()
@@ -129,7 +129,7 @@ namespace CorruptedCasino
                 }
             };
             
-            await Store.Maintenance.SendAsync(new ConfigureRevisionsOperation(config));
+            await Store.Maintenance.SendAsync(new ConfigureRevisionsOperation(config)).ConfigureAwait(false);
         }
 
         public class BetsIndex : AbstractIndexCreationTask<Bet, BetsIndex.BetsResult>
@@ -162,8 +162,10 @@ namespace CorruptedCasino
                     group result by new { result.LotteryId, result.Won } into g
                     select new
                     {
+#pragma warning disable IDE0037 // Use inferred member name
                         LotteryId = g.Key.LotteryId,
                         Won = g.Key.Won,
+#pragma warning restore IDE0037 // Use inferred member name
                         Total = g.Sum(x => x.Total),
                         BetsId = g.Key.Won ? g.Select(b => b.BetsId[0]).ToArray() : null
                     };
@@ -196,13 +198,13 @@ namespace CorruptedCasino
                 {
                     try
                     {
-                        await Task.Delay(Lottery.Rand.Next(500, 1000));
+                        await Task.Delay(Lottery.Rand.Next(500, 1000)).ConfigureAwait(false);
                         var name = UserOperations.GetName();
-                        var user = await UserOperations.RegisterOrLoad($"{name}@karmel.com", name);
+                        var user = await UserOperations.RegisterOrLoad($"{name}@karmel.com", name).ConfigureAwait(false);
                         for (int j = 0; j < 10; j++)
                         {
-                            await Task.Delay(Lottery.Rand.Next(500, 1000));
-                            await user.PlaceBet(lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10));
+                            await Task.Delay(Lottery.Rand.Next(500, 1000)).ConfigureAwait(false);
+                            await user.PlaceBet(lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10)).ConfigureAwait(false);
                         }
                     }
                     catch (ConcurrencyException)
@@ -236,13 +238,13 @@ namespace CorruptedCasino
             {
                 Task.Run(async () =>
                 {
-                    await Task.Delay(Lottery.Rand.Next(100, 1000));
+                    await Task.Delay(Lottery.Rand.Next(100, 1000)).ConfigureAwait(false);
                     var name = UserOperations.GetName();
-                    var user = await UserOperations.RegisterOrLoad($"{name}@karmel.com", name);
+                    var user = await UserOperations.RegisterOrLoad($"{name}@karmel.com", name).ConfigureAwait(false);
                     while (true)
                     {
-                        await Task.Delay(Lottery.Rand.Next(100, 500));
-                        await user.PlaceBet(lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10));
+                        await Task.Delay(Lottery.Rand.Next(100, 500)).ConfigureAwait(false);
+                        await user.PlaceBet(lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10)).ConfigureAwait(false);
                     }
                 });
             }
@@ -257,7 +259,7 @@ namespace CorruptedCasino
         {
             var policy = Policy.Handle<TimeoutException>().Retry(5);
            // Console.Write("Creating Lottery ... ");
-            var lottery = await Lottery.CreateLottery();
+            var lottery = await Lottery.CreateLottery().ConfigureAwait(false);
 
             Instance.ReportInfo($"Lottery {lottery.Id} was created and will overdue at {lottery.DueTime}");
            // Console.WriteLine($"Done {lottery.Id}");
@@ -267,12 +269,12 @@ namespace CorruptedCasino
             Instance.ReportInfo($"Start betting in lottery {lottery.Id}");
             var sleep = (int)(lottery.DueTime - DateTime.UtcNow).TotalMilliseconds;
             if (sleep > 10)
-                await Task.Delay(sleep);
+                await Task.Delay(sleep).ConfigureAwait(false);
 
             Instance.ReportInfo($"Lottery {lottery.Id} is overdue");
 
             //Console.Write("Finalize bets ... ");
-            await policy.Execute(lottery.FinalizeBets);
+            await policy.Execute(lottery.FinalizeBets).ConfigureAwait(false);
             //Console.WriteLine("Done");
 
             Instance.ReportInfo($"Rolling the dice for lottery {lottery.Id}");
@@ -284,12 +286,12 @@ namespace CorruptedCasino
             Instance.ReportInfo($"Lottery {lottery.Id} is completed");
             // Console.WriteLine("Done");
 
-            var profit = await policy.Execute(lottery.GetFinalBettingReport);
+            var profit = await policy.Execute(lottery.GetFinalBettingReport).ConfigureAwait(false);
             Instance.ReportSuccess($"Report for lottery {lottery.Id} was generated and winners were rewarded.");
             
             // Console.WriteLine(profit);
 
-            await t;
+            await t.ConfigureAwait(false);
         }
 
        // protected EventResponse ReportEvent => base.ReportEvent(eventInfo);

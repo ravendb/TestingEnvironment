@@ -117,7 +117,7 @@ namespace TestsRunner
                                 }
                                 catch (Exception ex)
                                 {
-                                    stdOut.WriteLine("Unable to dispose test after exception: " + e);
+                                    stdOut.WriteLine("Unable to dispose test after exception: " + ex);
                                 }
                             }
                         }

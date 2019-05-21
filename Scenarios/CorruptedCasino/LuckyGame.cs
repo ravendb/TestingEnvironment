@@ -39,7 +39,7 @@ namespace CorruptedCasino
 
         public static int PoolSize = 10;
 
-        private static long WinRatio = GetBinCoeff(PoolSize, NumberSize);
+        private static readonly long WinRatio = GetBinCoeff(PoolSize, NumberSize);
 
         public enum LotteryStatus
         {
@@ -68,8 +68,8 @@ namespace CorruptedCasino
             using (var session = Casino.GetSessionAsync)
             {
                 session.Advanced.WaitForReplicationAfterSaveChanges(timeout:TimeSpan.FromSeconds(180),replicas: Casino.ReplicaCount());
-                await session.StoreAsync(lottery, lottery.Id);
-                await session.SaveChangesAsync();
+                await session.StoreAsync(lottery, lottery.Id).ConfigureAwait(false);
+                await session.SaveChangesAsync().ConfigureAwait(false);
             }
 
             return lottery;
@@ -120,19 +120,19 @@ namespace CorruptedCasino
                 // ensures that no more bets accepted after this session is committed 
                 session.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(180), replicas: Casino.ReplicaCount());
 
-                var lottery = await session.LoadAsync<Lottery>(Id);
+                var lottery = await session.LoadAsync<Lottery>(Id).ConfigureAwait(false);
                 lottery.Status = LotteryStatus.PendingResults;
 
                 await session.StoreAsync(new Bet
                 {
                     LotteryId = Id,
                     BetStatus = Bet.Status.Closed
-                }, $"close/{Id}");
+                }, $"close/{Id}").ConfigureAwait(false);
 
-                await session.SaveChangesAsync();
+                await session.SaveChangesAsync().ConfigureAwait(false);
             }
 
-            if (_collecting.WaitOne(TimeSpan.FromSeconds(30)) == false)
+            if (_collecting.WaitOne(TimeSpan.FromSeconds(60)) == false)
                 throw new TimeoutException();
         }
 
@@ -144,24 +144,24 @@ namespace CorruptedCasino
 
                 var won = session.Query<Casino.BetsIndex.BetsResult, Casino.BetsIndex>()
                     .Where(b => b.Won && b.LotteryId == Id)
-                    .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(5))).LazilyAsync();
+                    .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(60))).LazilyAsync();
 
                 var lost = session.Query<Casino.BetsIndex.BetsResult, Casino.BetsIndex>()
                     .Where(b => b.Won == false && b.LotteryId == Id)
-                    .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(5))).LazilyAsync();
+                    .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(60))).LazilyAsync();
 
-                var winners = (await won.Value).SingleOrDefault();
-                var losers = (await lost.Value).SingleOrDefault();
+                var winners = (await won.Value.ConfigureAwait(false)).SingleOrDefault();
+                var losers = (await lost.Value.ConfigureAwait(false)).SingleOrDefault();
 
                 var realWinners = winners?.BetsId;
                 if (realWinners != null)
                 {
-                    var winnerBets = await session.LoadAsync<Bet>(realWinners);
+                    var winnerBets = await session.LoadAsync<Bet>(realWinners).ConfigureAwait(false);
                     var group = winnerBets.GroupBy(w => w.Value.UserId);
 
                     foreach (var userGroup in group)
                     {
-                        var winner = await session.LoadAsync<User>(userGroup.Key);
+                        var winner = await session.LoadAsync<User>(userGroup.Key).ConfigureAwait(false);
                         foreach (var bet in userGroup)
                         {
                             winner.Credit += bet.Value.Price * WinRatio;
@@ -170,7 +170,7 @@ namespace CorruptedCasino
                         Console.WriteLine($"{winner.Name} has won!!");
                     }
 
-                    await session.SaveChangesAsync();
+                    await session.SaveChangesAsync().ConfigureAwait(false);
                 }
                 else
                 {
@@ -187,10 +187,10 @@ namespace CorruptedCasino
             {
                 session.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(180), replicas: Casino.ReplicaCount());
 
-                var lottery = await session.LoadAsync<Lottery>(Id);
+                var lottery = await session.LoadAsync<Lottery>(Id).ConfigureAwait(false);
                 lottery.Result = Result;
                 lottery.Status = Status;
-                await session.SaveChangesAsync();
+                await session.SaveChangesAsync().ConfigureAwait(false);
             }
         }
 
@@ -217,7 +217,7 @@ namespace CorruptedCasino
         {
             using (var session = Casino.GetSessionAsync)
             {
-                var winners = await RewardWinners(session);
+                var winners = await RewardWinners(session).ConfigureAwait(false);
                 Console.WriteLine(winners.Count > 0 ? $"We have a winner!!" : $"No one won the lottery {Id} :(");
             }
         }
@@ -231,18 +231,18 @@ namespace CorruptedCasino
 
             foreach (var bet in winnersBets)
             {
-                var user = await session.LoadAsync<User>(bet.UserId);
+                var user = await session.LoadAsync<User>(bet.UserId).ConfigureAwait(false);
                 user.Credit += bet.Price * WinRatio;
                 winners.Add(user);
             }
-            await session.SaveChangesAsync();
+            await session.SaveChangesAsync().ConfigureAwait(false);
 
             return winners;
         }
 
         public static async Task ValidateOpen(IAsyncDocumentSession session, string lotteryId)
         {
-            var lottery = await session.LoadAsync<Lottery>(lotteryId);
+            var lottery = await session.LoadAsync<Lottery>(lotteryId).ConfigureAwait(false);
             if (lottery.Status != LotteryStatus.Open)
             {
                 throw new ConcurrencyException();

@@ -166,7 +166,15 @@ namespace TestingEnvironment.Orchestrator
                 };
                 if (author.Equals("TestRunner"))
                     testInfo.Id = "TestRunner/";
+
                 session.Store(testInfo);
+
+                if (author.Equals("TestRunner"))
+                {
+                    var metadata = session.Advanced.GetMetadataFor(testInfo);
+                    metadata["@collection"] = "Runner";
+                }
+
                 session.SaveChanges();
             }
 
