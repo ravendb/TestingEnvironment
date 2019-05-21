@@ -167,7 +167,7 @@ namespace CorruptedCasino
                             winner.Credit += bet.Value.Price * WinRatio;
                         }
                        
-                        Console.WriteLine($"{winner.Name} has won!!");
+                        // Console.WriteLine($"{winner.Name} has won!!");
                     }
 
                     await session.SaveChangesAsync().ConfigureAwait(false);
