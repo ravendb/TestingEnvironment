@@ -164,17 +164,8 @@ namespace TestingEnvironment.Orchestrator
                     Events = new List<EventInfoWithExceptionAsString>(),
                     Config = testConfig //record what servers we are working with in this particular test
                 };
-                if (author.Equals("TestRunner"))
-                    testInfo.Id = "TestRunner/";
-
+                
                 session.Store(testInfo);
-
-                if (author.Equals("TestRunner"))
-                {
-                    var metadata = session.Advanced.GetMetadataFor(testInfo);
-                    metadata["@collection"] = "Runner";
-                }
-
                 session.SaveChanges();
             }
 

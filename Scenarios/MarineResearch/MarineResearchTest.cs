@@ -28,7 +28,7 @@ namespace MarineResearch
         {
             using (DocumentStore.Initialize())
             {
-                RunActualTestAsync().ConfigureAwait(false);
+                RunActualTestAsync().GetAwaiter().GetResult();
             }
         }
 
