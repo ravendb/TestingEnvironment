@@ -36,7 +36,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MarineResearch", "Scenarios
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Subscriptions", "Scenarios\Subscriptions\Subscriptions.csproj", "{990CFC76-D12A-48CB-8827-D87583A591E0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestsRunner", "Agent\TestsRunner\TestsRunner.csproj", "{30DCD407-46CF-4A5A-B153-9D84E861B5F5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestsRunner", "Agent\TestsRunner\TestsRunner.csproj", "{30DCD407-46CF-4A5A-B153-9D84E861B5F5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskCleaner", "TaskCleaner\TaskCleaner.csproj", "{D82591D4-BD4A-45DD-8488-F9AE6543A444}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -88,6 +90,10 @@ Global
 		{30DCD407-46CF-4A5A-B153-9D84E861B5F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30DCD407-46CF-4A5A-B153-9D84E861B5F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{30DCD407-46CF-4A5A-B153-9D84E861B5F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D82591D4-BD4A-45DD-8488-F9AE6543A444}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D82591D4-BD4A-45DD-8488-F9AE6543A444}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D82591D4-BD4A-45DD-8488-F9AE6543A444}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D82591D4-BD4A-45DD-8488-F9AE6543A444}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -101,6 +107,7 @@ Global
 		{15855ED6-F6DA-4E35-9C30-219F8D4D9AE5} = {28FA38AF-A144-476F-B6D1-79A7532ED2CC}
 		{990CFC76-D12A-48CB-8827-D87583A591E0} = {28FA38AF-A144-476F-B6D1-79A7532ED2CC}
 		{30DCD407-46CF-4A5A-B153-9D84E861B5F5} = {2EF65611-C518-4E94-BC73-4AC47AFD83BC}
+		{D82591D4-BD4A-45DD-8488-F9AE6543A444} = {28FA38AF-A144-476F-B6D1-79A7532ED2CC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D8EB129C-81E9-4C3D-A4A3-DA9092D30CDE}
