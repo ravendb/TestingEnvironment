@@ -159,6 +159,7 @@ namespace TestingEnvironment.Orchestrator
                     Name = testName,
                     ExtendedName = $"{testName} ({now})",
                     TestClassName = testClassName,
+                    Finished = false,
                     Author = author,
                     Start = now,
                     Events = new List<EventInfoWithExceptionAsString>(),
@@ -187,6 +188,7 @@ namespace TestingEnvironment.Orchestrator
                         var latestTestInfo = session.Query<TestInfo>().FirstOrDefault(x => x.Name == testName);
                         if (latestTestInfo != null)
                         {
+                            latestTestInfo.Finished = true;
                             latestTestInfo.End = DateTime.UtcNow;
                             session.Store(latestTestInfo);
                             session.SaveChanges();
@@ -235,7 +237,7 @@ namespace TestingEnvironment.Orchestrator
         
         private void EnsureDatabaseExists(string databaseName, IDocumentStore documentStore, bool truncateExisting = false)
         {
-            var databaseNames = documentStore.Maintenance.Server.Send(new GetDatabaseNamesOperation(0, int.MaxValue));
+            var databaseNames = documentStore.Maintenance.Server.Send(new GetDatabaseNamesOperation(0, int.MaxValue));            
             if (truncateExisting && databaseNames.Contains(databaseName))
             {
 //                var result = documentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, true));
@@ -252,8 +254,15 @@ namespace TestingEnvironment.Orchestrator
             }
             else if (!databaseNames.Contains(databaseName))
             {
+                Console.WriteLine("Checking against");
+                foreach (var o in databaseNames)
+                    Console.WriteLine(o);
+                Console.WriteLine("with:");
+                foreach (var o in documentStore.Urls)
+                    Console.WriteLine(o);
                 var doc = new DatabaseRecord(databaseName);
                 documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, documentStore.Urls.Length));
+                Console.WriteLine("done");
             }
         }        
 

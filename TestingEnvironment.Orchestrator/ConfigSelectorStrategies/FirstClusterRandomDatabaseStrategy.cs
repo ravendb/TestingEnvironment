@@ -8,6 +8,7 @@ namespace TestingEnvironment.Orchestrator.ConfigSelectorStrategies
     public class FirstClusterRandomDatabaseStrategy : ITestConfigSelectorStrategy
     {
         private Lazy<TestConfig> _nextConfigLazy;
+        public static Random random = new Random();
 
         public void Initialize(OrchestratorConfiguration configuration)
         {
@@ -17,7 +18,7 @@ namespace TestingEnvironment.Orchestrator.ConfigSelectorStrategies
             if (configuration.Clusters?.Length == 0)
                 throw new InvalidOperationException("Must be at least one cluster configured!");
 
-            var rnd = new Random().Next(1, configuration.Databases.Length);
+            var rnd = random.Next(1, configuration.Databases.Length - 1);
 
             _nextConfigLazy = new Lazy<TestConfig>(() => new TestConfig
             {

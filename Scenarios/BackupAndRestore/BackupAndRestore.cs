@@ -437,7 +437,7 @@ namespace BackupAndRestore
                     var restoreBackupTaskCommand = restoreBackupTask.GetCommand(DocumentStore.Conventions, session.Advanced.Context);
                     await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
                         null, session.Advanced.Context, restoreBackupTaskCommand, shouldRetry: false).ConfigureAwait(false);
-                    
+
                     var getOperationStateTask = new GetOperationStateOperation(restoreBackupTaskCommand.Result.OperationId);
                     var getOperationStateTaskCommand = getOperationStateTask.GetCommand(DocumentStore.Conventions, session.Advanced.Context);
 
