@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Globalization;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
-using TestingEnvironment.Common;
+using Microsoft.Extensions.Configuration;
 
 namespace TestingEnvironment.Orchestrator
 {
@@ -12,11 +9,14 @@ namespace TestingEnvironment.Orchestrator
     {
         public static void Main(string[] args)
         {
-            if (args.Length != 1)
-            {
-                Console.WriteLine("Usage: Orchestrator <orchestrator url>");
-                Environment.Exit(1);
-            }
+            var builder = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .SetBasePath(Environment.CurrentDirectory);
+            var config = builder.Build();
+            var appConfig = new OrchestratorConfiguration();
+            ConfigurationBinder.Bind(config, appConfig);
+
+
             Console.WriteLine("Running RavenDB Test Orchestrator");
             Console.WriteLine("=================================");
             var _orch = Orchestrator.Instance;
@@ -25,14 +25,14 @@ namespace TestingEnvironment.Orchestrator
                 Console.WriteLine($"Set default strategy to: {strategy}");
             else
                 throw new InvalidOperationException($"Cannot set strategy to {strategy}");
-            CreateWebHostBuilder(args).Build().Run();
+            CreateWebHostBuilder(appConfig.OrchestratorUrl).Build().Run();
         }
 
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args)
+        public static IWebHostBuilder CreateWebHostBuilder(string orchUrl)
         {
             return new WebHostBuilder()
                 .UseContentRoot(Directory.GetCurrentDirectory())
-                .UseUrls(args[0]) // , "http://localhost:5000")
+                .UseUrls(orchUrl) // , "http://localhost:5000")
                 .UseKestrel()
                 .UseStartup<Startup>();
         }
