@@ -11,6 +11,7 @@
     {
         public string Name { get; set; }
         public bool HasAuthentication { get; set; }
+        public string PemFilePath { get; set; }
         public string[] Urls { get; set; }
 
         protected bool Equals(ClusterInfo other)

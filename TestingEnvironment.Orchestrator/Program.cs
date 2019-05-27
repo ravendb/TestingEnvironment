@@ -12,6 +12,11 @@ namespace TestingEnvironment.Orchestrator
     {
         public static void Main(string[] args)
         {
+            if (args.Length != 1)
+            {
+                Console.WriteLine("Usage: Orchestrator <orchestrator url>");
+                Environment.Exit(1);
+            }
             Console.WriteLine("Running RavenDB Test Orchestrator");
             Console.WriteLine("=================================");
             var _orch = Orchestrator.Instance;

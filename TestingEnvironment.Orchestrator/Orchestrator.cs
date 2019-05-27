@@ -106,14 +106,13 @@ namespace TestingEnvironment.Orchestrator
             _currentConfigSelectorStrategy = _configSelectorStrategies[0];
 
             foreach (var clusterInfo in _config.Clusters ?? Enumerable.Empty<ClusterInfo>())
-            {
-                clusterInfo.Urls = clusterInfo.Urls.Select(PrepareUrlForDocumentStore).ToArray();
-
+            {                
+                var cert = clusterInfo.PemFilePath == null ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(clusterInfo.PemFilePath);
                 var store = new DocumentStore
                 {
                     Database = _config.Databases?[0],
                     Urls = clusterInfo.Urls,
-                    //Certificate =  TODO: finish this
+                    Certificate = cert
                 };
                 store.Initialize();
                 _clusterDocumentStores.Add(clusterInfo, store);
@@ -121,11 +120,6 @@ namespace TestingEnvironment.Orchestrator
                 foreach(var database in _config.Databases ?? Enumerable.Empty<string>())
                     EnsureDatabaseExists(database, store);
             }
-        }
-
-        private static string PrepareUrlForDocumentStore(string url)
-        {
-            return $"http://{url.Replace("http://", string.Empty).Replace("https://", string.Empty)}";
         }
 
         public bool TrySetConfigSelectorStrategy(string strategyName)
@@ -254,15 +248,8 @@ namespace TestingEnvironment.Orchestrator
             }
             else if (!databaseNames.Contains(databaseName))
             {
-                Console.WriteLine("Checking against");
-                foreach (var o in databaseNames)
-                    Console.WriteLine(o);
-                Console.WriteLine("with:");
-                foreach (var o in documentStore.Urls)
-                    Console.WriteLine(o);
                 var doc = new DatabaseRecord(databaseName);
                 documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, documentStore.Urls.Length));
-                Console.WriteLine("done");
             }
         }        
 

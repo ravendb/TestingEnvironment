@@ -1,8 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using Raven.Client.Documents;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -142,12 +144,17 @@ namespace Notifier
                         else if (total == 0)
                             color = "warning"; // yellow                        
 
+                        var builder = new ConfigurationBuilder()
+                            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                            .SetBasePath(Environment.CurrentDirectory);
+                        var config = builder.Build();
+                        var appConfig = new NotifierConfig();
+                        ConfigurationBinder.Bind(config, appConfig);
                         
-
                         string msgstring = @"
                                             {   
-                                                ""Username"": """+ usermail + @""",
-                                                ""Channel"": """ + username + @""",
+                                                ""Username"": """+ appConfig.useremail + @""",
+                                                ""Channel"": """ + appConfig.username + @""",
                                                 ""attachments"": [
                                                     {
                                                         ""mrkdwn_in"": [""text""],
@@ -185,7 +192,7 @@ namespace Notifier
                             {
                                 NameValueCollection data = new NameValueCollection();
                                 data["payload"] = msgstring;
-                                var response = client.UploadValues(uri, "POST", data);
+                                var response = client.UploadValues(appConfig.uri, "POST", data);
 
                                 //The response text is usually "ok"
                                 string responseText = Encoding.UTF8.GetString(response);
