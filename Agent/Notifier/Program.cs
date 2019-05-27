@@ -153,8 +153,8 @@ namespace Notifier
                         
                         string msgstring = @"
                                             {   
-                                                ""Username"": """+ appConfig.useremail + @""",
-                                                ""Channel"": """ + appConfig.username + @""",
+                                                ""Username"": """+ appConfig.UserEmail + @""",
+                                                ""Channel"": """ + appConfig.UserName + @""",
                                                 ""attachments"": [
                                                     {
                                                         ""mrkdwn_in"": [""text""],
@@ -192,7 +192,7 @@ namespace Notifier
                             {
                                 NameValueCollection data = new NameValueCollection();
                                 data["payload"] = msgstring;
-                                var response = client.UploadValues(appConfig.uri, "POST", data);
+                                var response = client.UploadValues(appConfig.Uri, "POST", data);
 
                                 //The response text is usually "ok"
                                 string responseText = Encoding.UTF8.GetString(response);
