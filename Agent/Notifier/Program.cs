@@ -190,8 +190,10 @@ namespace Notifier
                             lastDaySent = now.Day;
                             using (WebClient client = new WebClient())
                             {
-                                NameValueCollection data = new NameValueCollection();
-                                data["payload"] = msgstring;
+                                NameValueCollection data = new NameValueCollection
+                                {
+                                    ["payload"] = msgstring
+                                };
                                 var response = client.UploadValues(appConfig.Uri, "POST", data);
 
                                 //The response text is usually "ok"

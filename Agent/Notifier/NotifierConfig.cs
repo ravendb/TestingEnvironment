@@ -2,8 +2,8 @@
 {
     internal class NotifierConfig
     {
-        public string UserEmail;
-        public string UserName;
-        public string Uri;
+        public string UserEmail { get; set; }
+        public string UserName { get; set; }
+        public string Uri { get; set; }
     }
 }
