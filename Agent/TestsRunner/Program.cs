@@ -9,12 +9,16 @@ namespace TestsRunner
 {
     public class StrategySet : BaseTest
     {
-        public StrategySet(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "TestRunner")
-        { }
+        private int _round;
+        public StrategySet(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "TestRunner")
+        {
+            _round = round;
+        }
 
         public override void RunActualTest()
         {
             SetStrategy("FirstClusterRandomDatabaseSelector");
+            SetRound(_round);
         }
     }
 
@@ -22,7 +26,7 @@ namespace TestsRunner
     {
         public static void Main(string[] args)
         {
-            (var stdOut, var orchestratorUrl) = HandleArgs(args);
+            (var stdOut, var orchestratorUrl, var round) = HandleArgs(args);
 
             try
             {
@@ -38,12 +42,15 @@ namespace TestsRunner
                 stdOut.Flush();
 
                 stdOut.WriteLine("Setting Strategy: FirstClusterRandomDatabaseStrategy");
-                using (var client = new StrategySet(orchestratorUrl, "StrategySet"))
+                using (var client = new StrategySet(orchestratorUrl, "StrategySet", round))
                 {
                     client.Initialize();
                     client.RunTest();
                 }
                 stdOut.Flush();
+
+                Console.WriteLine("Setting round: " + round);
+
 
                 stdOut.Write("Loading Tests: ");
 
@@ -135,10 +142,12 @@ namespace TestsRunner
             }
         }
 
-        private static (TextWriter stdOut, string orchestratorUrl) HandleArgs(string[] args)
+        private static (TextWriter stdOut, string orchestratorUrl, int round) HandleArgs(string[] args)
         {
             string orchestratorUrl = null;
             string filepath = null;
+            var round = -1;
+
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -174,6 +183,11 @@ namespace TestsRunner
                         Console.WriteLine("        -f=<filepath>                                                 ");
                         Console.WriteLine("            Redirect output to a file. If option not specified, StdOut");
                         Console.WriteLine("            will be used.                                             ");
+                        Console.WriteLine("        --round=<round number>                                        ");
+                        Console.WriteLine("        -r=<round number>                                             ");
+                        Console.WriteLine("            Set or increase round number. If not set, no change done. ");
+                        Console.WriteLine("            Round number above 0 overrides current round number,      ");
+                        Console.WriteLine("            setting to 0 will increase current round by one.          ");                        
                         Console.WriteLine();
                         Environment.Exit(0);
                         break;
@@ -184,6 +198,13 @@ namespace TestsRunner
                     case "--output-to-file":
                     case "-f":
                         filepath = kv[1];
+                        break;
+                    case "--round":
+                    case "-r":
+                        if (int.TryParse(kv[1], out round) == false)
+                        {
+                            Console.WriteLine("Invalid Arguments (round is not a number)");
+                        }
                         break;
                     default:
                         Console.WriteLine("Invalid Arguments");
@@ -199,7 +220,7 @@ namespace TestsRunner
             }
 
             TextWriter textWriter = filepath == null ? Console.Out : File.CreateText(filepath);
-            return (textWriter, orchestratorUrl);
+            return (textWriter, orchestratorUrl, round);
         }
     }
 }

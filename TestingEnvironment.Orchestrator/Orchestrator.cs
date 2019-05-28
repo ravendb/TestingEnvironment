@@ -18,6 +18,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Embedded;
 using Sparrow.Json;
+using TestingEnvironment.Client;
 using TestingEnvironment.Common;
 using TestingEnvironment.Common.OrchestratorReporting;
 
@@ -36,7 +37,7 @@ namespace TestingEnvironment.Orchestrator
         private readonly WindsorContainer _container = new WindsorContainer();
 
         private readonly IDocumentStore _reportingDocumentStore;
-        
+
         private readonly ITestConfigSelectorStrategy[] _configSelectorStrategies;
         private ITestConfigSelectorStrategy _currentConfigSelectorStrategy;
 
@@ -51,9 +52,9 @@ namespace TestingEnvironment.Orchestrator
         protected Orchestrator()
         {
             var configProvider = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", optional:false, reloadOnChange:true)
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .Build();
-            
+
             _config = new OrchestratorConfiguration();
             ConfigurationBinder.Bind(configProvider, _config);
 
@@ -71,11 +72,11 @@ namespace TestingEnvironment.Orchestrator
             {
                 RaiseServer(serverInfo);
             }
-            
+
             EmbeddedServer.Instance.StartServer(new ServerOptions
-            {  
+            {
                 ServerUrl = _config.EmbeddedServerUrl,
-                CommandLineArgs = new List<string> { " --Security.UnsecuredAccessAllowed=PublicNetwork ", " --Setup.Mode=None ", $" --PublicServerUrl={_config.EmbeddedServerUrl}"}
+                CommandLineArgs = new List<string> { " --Security.UnsecuredAccessAllowed=PublicNetwork ", " --Setup.Mode=None ", $" --PublicServerUrl={_config.EmbeddedServerUrl}" }
             });
             _reportingDocumentStore = EmbeddedServer.Instance.GetDocumentStore(new DatabaseOptions(OrchestratorDatabaseName));
             _reportingDocumentStore.Initialize();
@@ -96,17 +97,17 @@ namespace TestingEnvironment.Orchestrator
                 .LifestyleSingleton());
 
             _configSelectorStrategies = _container.ResolveAll<ITestConfigSelectorStrategy>();
-            if(_configSelectorStrategies.Length == 0)
+            if (_configSelectorStrategies.Length == 0)
                 throw new InvalidOperationException("Something really bad happened... there is no config selector strategies implemented!");
 
-            foreach(var strategy in _configSelectorStrategies)
+            foreach (var strategy in _configSelectorStrategies)
                 strategy.Initialize(_config);
 
             //TODO: make this choice persistent? (via the embedded RavenDB instance)
             _currentConfigSelectorStrategy = _configSelectorStrategies[0];
 
             foreach (var clusterInfo in _config.Clusters ?? Enumerable.Empty<ClusterInfo>())
-            {                
+            {
                 var cert = clusterInfo.PemFilePath == null ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(clusterInfo.PemFilePath);
                 var store = new DocumentStore
                 {
@@ -117,7 +118,7 @@ namespace TestingEnvironment.Orchestrator
                 store.Initialize();
                 _clusterDocumentStores.Add(clusterInfo, store);
 
-                foreach(var database in _config.Databases ?? Enumerable.Empty<string>())
+                foreach (var database in _config.Databases ?? Enumerable.Empty<string>())
                     EnsureDatabaseExists(database, store);
             }
         }
@@ -139,7 +140,7 @@ namespace TestingEnvironment.Orchestrator
         public TestConfig RegisterTest(string testName, string testClassName, string author)
         {
             //decide which servers/database the test will get
-            if(_currentConfigSelectorStrategy == null)
+            if (_currentConfigSelectorStrategy == null)
                 throw new InvalidOperationException("Something really bad happened... the config selector strategy appears to be null!");
 
             var testConfig = _currentConfigSelectorStrategy.GetNextTestConfig();
@@ -159,7 +160,7 @@ namespace TestingEnvironment.Orchestrator
                     Events = new List<EventInfoWithExceptionAsString>(),
                     Config = testConfig //record what servers we are working with in this particular test
                 };
-                
+
                 session.Store(testInfo);
                 session.SaveChanges();
             }
@@ -208,6 +209,42 @@ namespace TestingEnvironment.Orchestrator
             }
         }
 
+        public int GetRound()
+        {
+            using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
+            {
+                var doc = session.Load<StaticInfo>("staticInfo/1");
+                if (doc == null)
+                {
+                    var newStaticInfo = new StaticInfo
+                    {
+                        Round = 1
+                    };
+
+                    session.Store(newStaticInfo, "staticInfo/1");
+                    session.SaveChanges();
+                    return 1;
+                }
+
+                return doc.Round;
+            }
+        }
+
+        public int SetRound(int round)
+        {
+            using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
+            {
+                var newStaticInfo = new StaticInfo
+                {
+                    Round = round
+                };
+
+                session.Store(newStaticInfo, "staticInfo/1");
+                session.SaveChanges();
+            }
+            return round;
+        }
+
         public EventResponse ReportEvent(string testName, EventInfoWithExceptionAsString @event)
         {
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
@@ -224,26 +261,26 @@ namespace TestingEnvironment.Orchestrator
                 //if returning EventResponse.ResponseType.Abort -> opportunity to request the test client to abort test...
                 return new EventResponse
                 {
-                    Type = EventResponse.ResponseType.Ok 
+                    Type = EventResponse.ResponseType.Ok
                 };
-            }            
+            }
         }
-        
+
         private void EnsureDatabaseExists(string databaseName, IDocumentStore documentStore, bool truncateExisting = false)
         {
-            var databaseNames = documentStore.Maintenance.Server.Send(new GetDatabaseNamesOperation(0, int.MaxValue));            
+            var databaseNames = documentStore.Maintenance.Server.Send(new GetDatabaseNamesOperation(0, int.MaxValue));
             if (truncateExisting && databaseNames.Contains(databaseName))
             {
-//                var result = documentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, true));
-//                if (result.PendingDeletes.Length > 0)
-//                {
-//                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
-//                        documentStore.GetRequestExecutor()
-//                            .Execute(new WaitForRaftIndexCommand(result.RaftCommandIndex), ctx);
-//                }
-//
-//                var doc = new DatabaseRecord(databaseName);
-//                documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, documentStore.Urls.Length));
+                //                var result = documentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, true));
+                //                if (result.PendingDeletes.Length > 0)
+                //                {
+                //                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                //                        documentStore.GetRequestExecutor()
+                //                            .Execute(new WaitForRaftIndexCommand(result.RaftCommandIndex), ctx);
+                //                }
+                //
+                //                var doc = new DatabaseRecord(databaseName);
+                //                documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, documentStore.Urls.Length));
 
             }
             else if (!databaseNames.Contains(databaseName))
@@ -251,7 +288,7 @@ namespace TestingEnvironment.Orchestrator
                 var doc = new DatabaseRecord(databaseName);
                 documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, documentStore.Urls.Length));
             }
-        }        
+        }
 
         #region Raven Instance Activation Methods
 
@@ -272,9 +309,9 @@ namespace TestingEnvironment.Orchestrator
                 // RedirectStandardOutput = true,
                 // RedirectStandardError = true,
                 RedirectStandardInput = true,
-                UseShellExecute = false,                
+                UseShellExecute = false,
             };
-            
+
             var _ = Process.Start(processStartInfo);
 
             //string url = null;

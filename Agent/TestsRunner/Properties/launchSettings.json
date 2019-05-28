@@ -2,7 +2,7 @@
   "profiles": {
     "TestsRunner": {
       "commandName": "Project",
-      "commandLineArgs": "-o=http://10.0.0.69:9100"
+      "commandLineArgs": "-o=http://10.0.0.92:9500 -r=3"
     }
   }
 }
