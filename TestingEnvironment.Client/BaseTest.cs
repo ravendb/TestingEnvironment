@@ -31,8 +31,7 @@ namespace TestingEnvironment.Client
         {
             var url = $"/register?testName={Uri.EscapeDataString(TestName)}&testClassName={Uri.EscapeDataString(GetType().FullName)}&author={Uri.EscapeDataString(_author)}";
             var config = _orchestratorClient.Put<TestConfig>(url,null);
-            // var cert = config.PemFilePath == null ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(config.PemFilePath); // TODO : remove "HasAuthentication"
-            var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(@"D:\\TE\\adi_cloud_cert.pfx");
+            var cert = config.PemFilePath == null ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(config.PemFilePath); // TODO : remove "HasAuthentication"
             DocumentStore = new DocumentStore
             {
                 Urls = config.Urls,

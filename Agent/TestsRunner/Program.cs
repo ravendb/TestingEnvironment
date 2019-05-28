@@ -191,7 +191,7 @@ namespace TestsRunner
                         Console.WriteLine();
                         Environment.Exit(0);
                         break;
-                    case "--orchestratorUrl":
+                    case "--orchestratorurl":
                     case "-o":
                         orchestratorUrl = kv[1];
                         break;
