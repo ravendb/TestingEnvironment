@@ -83,6 +83,8 @@ namespace Counters
 
             }
 
+            // Need wait for non stale .. 
+
             var script = @"from BlogComments as comment "+
                          $"where comment.Rating > 50 and comment.Tag in('{randTag1}', '{randTag2}')" + @"
                            update 

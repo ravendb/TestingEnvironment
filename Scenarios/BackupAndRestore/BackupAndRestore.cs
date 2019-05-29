@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
@@ -23,7 +24,7 @@ namespace BackupAndRestore
 
         private const string _chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         private const string _charsOnly = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        private const string _backupPath = @"C:\backups";
+        private const string _backupPath = "tempbackups";
 
         private const int _numberOfActors = 150_000;
         private const int _numberOfDirectors = 100_000;

@@ -57,6 +57,14 @@ namespace TestingEnvironment.Orchestrator
             {
                 return Orchestrator.Instance.TrySetConfigSelectorStrategy(Uri.UnescapeDataString((string)Request.Query.strategyName));
             });
+
+            Get<dynamic>("/get-round", _ =>
+                 Response.AsJson(Orchestrator.Instance.GetRound()));
+
+            Put("/set-round", @params =>
+            {
+                return Orchestrator.Instance.SetRound((int)Request.Query.round);
+            });
         }
     }
 }

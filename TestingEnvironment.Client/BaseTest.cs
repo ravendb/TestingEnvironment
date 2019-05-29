@@ -31,10 +31,13 @@ namespace TestingEnvironment.Client
         {
             var url = $"/register?testName={Uri.EscapeDataString(TestName)}&testClassName={Uri.EscapeDataString(GetType().FullName)}&author={Uri.EscapeDataString(_author)}";
             var config = _orchestratorClient.Put<TestConfig>(url,null);
+            var cert = config.PemFilePath == null ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(config.PemFilePath); // TODO : remove "HasAuthentication"
             DocumentStore = new DocumentStore
             {
                 Urls = config.Urls,
-                Database = config.Database
+                Database = config.Database,
+                Certificate = cert
+
             };
             DocumentStore.Initialize();
         }
@@ -95,6 +98,16 @@ namespace TestingEnvironment.Client
                 EventTime = DateTime.Now.ToString()
             };
             return _orchestratorClient.Post<EventResponse>($"/report?testName={TestName}", eventInfoWithExceptionAsString);
+        }
+
+        protected int SetRound(int round)
+        {            
+            var currentRound = _orchestratorClient.Get<int>($"/get-round");
+            if (round == 0)
+                round = ++currentRound;
+            if (round != -1)
+                currentRound = _orchestratorClient.Put<int>($"/set-round?round={round}");
+            return currentRound;
         }
 
         protected bool SetStrategy(string strategy)

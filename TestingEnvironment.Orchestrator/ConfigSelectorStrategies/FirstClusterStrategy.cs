@@ -21,7 +21,8 @@ namespace TestingEnvironment.Orchestrator.ConfigSelectorStrategies
             {
                 Database = configuration.Databases[0],
                 Urls = configuration.Clusters[0].Urls,
-                StrategyName = Name
+                StrategyName = Name,
+                PemFilePath = configuration.Clusters[0].PemFilePath
             });
         }
 

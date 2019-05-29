@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using Raven.Client.Documents;
 using System;
 using System.Collections.Generic;
@@ -7,33 +8,17 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using TestingEnvironment.Common.OrchestratorReporting;
+using TestingEnvironment.Client;
 
 namespace Notifier
 {
     public class Program
     {
-        public class Payload
-        {
-            [JsonProperty("channel")]
-            public string Channel { get; set; }
-            [JsonProperty("username")]
-            public string Username { get; set; }
-            [JsonProperty("attachments")]
-            public string Attachments { get; set; }
-        }
-        internal class Results
-        {
-            public int TotalTests { get; set; }
-            public Dictionary<string, int> Failed { get; set; }
-            public Dictionary<string, int> NotFinished { get; set; }
-        }
-
         public static void Main(string[] args)
         {
             var url = args[0];
 
-            int lastDaySent = DateTime.Now.Day;
-            var round = 1;
+            int lastDaySent = DateTime.Now.Day;            
             Console.WriteLine($"Notifier of Embedded Server : {url}");
 
             while (true)
@@ -48,6 +33,8 @@ namespace Notifier
                     Console.WriteLine($"{DateTime.Now} Read index results...");
                     using (var session = store.OpenAsyncSession())
                     {
+                        var roundResult = session.LoadAsync<StaticInfo>("staticInfo/1").Result;
+                        var round = roundResult.Round;                        
                         var results = session.Query<TestInfo, TestingEnvironment.Orchestrator.FailTestsComplete>().ToListAsync().Result;
                         Console.WriteLine("Total=" + results.Count);
                         var fails = new Dictionary<string, int>();
@@ -80,25 +67,32 @@ namespace Notifier
                         Console.WriteLine();
                         Console.WriteLine("Failed:");
                         Console.WriteLine("======");
-                        foreach (var kv in fails)
+                        if (fails.Count > 0)
                         {
-                            if (first)
-                            {
-                                failureText.Append(@"
+                            failureText.Append(@"
                                                     {
                                                         ""title"": ""*_Failures_*"",
                                                         ""value"": ""Unique Tests Count: " + fails.Count + @""",
                                                         ""short"": false
                                                     },
                                 ");
-                                first = false;
-                            }
-                            Console.WriteLine($"{kv.Key} = {kv.Value}");
+
                             failureText.Append(@"
                                                 {
-                                                    ""title"": """ + kv.Key + @""",
-                                                    ""value"": ""Count: " + kv.Value + @""",
-                                                    ""short"": true
+                                                    ""title"": ""Test Names (FailCount):"",
+                                                    ""value"": """);
+                            foreach (var kv in fails)
+                            {
+                                if (first)
+                                    first = false;
+                                else
+                                    failureText.Append(", ");
+
+                                Console.WriteLine($"{ kv.Key} = {kv.Value}");
+
+                                failureText.Append($"{kv.Key}({kv.Value})");
+                            }
+                            failureText.Append(@""",  ""short"": true
                                                 },
                             ");
                         }
@@ -142,24 +136,29 @@ namespace Notifier
                         else if (total == 0)
                             color = "warning"; // yellow                        
 
+                        var builder = new ConfigurationBuilder()
+                            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                            .SetBasePath(Environment.CurrentDirectory);
+                        var config = builder.Build();
+                        var appConfig = new NotifierConfig();
+                        ConfigurationBinder.Bind(config, appConfig);
                         
-
                         string msgstring = @"
                                             {   
-                                                ""Username"": """+ usermail + @""",
-                                                ""Channel"": """ + username + @""",
+                                                ""Username"": """+ appConfig.UserEmail + @""",
+                                                ""Channel"": """ + appConfig.UserName + @""",
                                                 ""attachments"": [
                                                     {
                                                         ""mrkdwn_in"": [""text""],
                                                         ""color"": """ + color + @""",
                                                         ""pretext"": ""Testing Environment Results"",
                                                         ""author_name"": ""Round " + round + @" (Click to view)"",
-                                                        ""author_link"": ""http://10.0.0.69:8090/studio/index.html#databases/query/index/FailTestsComplete?&database=Orchestrator"",
+                                                        ""author_link"": """ + url + @"/studio/index.html#databases/query/index/FailTestsComplete?&database=Orchestrator"",
                                                         ""author_icon"": ""https://ravendb.net/img/team/adi_avivi.jpg"",
-                                                        ""title"": ""Total Tests: " + total + @" | Total Failures: " + totalFailuresCount + @" | Total Not Completed: " + totalNotCompletedCount + @""",
+                                                        ""title"": ""Total Tests: " + total + @" | Total Failures: " + totalFailuresCount + @" | Still Running: " + totalNotCompletedCount + @""",
                                                         ""text"": ""\n\n"",
                                                         ""fields"": [
-                                                                    " + notFinishedText.ToString() + @"
+                                                                    " + /*notFinishedText.ToString()*/ "" + @"
                                                             " + failureText.ToString() + @"                        
                                                         ],                        
                                                         ""thumb_url"": ""https://ravendb.net/img/home/raven.png"",
@@ -173,8 +172,8 @@ namespace Notifier
 
                         
                         var now = DateTime.Now;
-                        if (now.Hour >= 9 &&
-                            now.Day != lastDaySent)
+                        //if (now.Hour >= 9 &&
+                        //    now.Day != lastDaySent)
                         {
                             Console.WriteLine();
                             Console.WriteLine("Sending:");
@@ -183,9 +182,11 @@ namespace Notifier
                             lastDaySent = now.Day;
                             using (WebClient client = new WebClient())
                             {
-                                NameValueCollection data = new NameValueCollection();
-                                data["payload"] = msgstring;
-                                var response = client.UploadValues(uri, "POST", data);
+                                NameValueCollection data = new NameValueCollection
+                                {
+                                    ["payload"] = msgstring
+                                };
+                                var response = client.UploadValues(appConfig.Uri, "POST", data);
 
                                 //The response text is usually "ok"
                                 string responseText = Encoding.UTF8.GetString(response);

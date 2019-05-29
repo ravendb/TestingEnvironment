@@ -13,6 +13,7 @@ namespace TestingEnvironment.Common.OrchestratorReporting
         public DateTime Start { get;set; }
         public DateTime End { get;set; }
         public bool Finished { get; set; }
+        public bool IsRunning { get; set; }
         public List<EventInfoWithExceptionAsString> Events { get;set; }
         public TestConfig Config { get; set; }
     }
