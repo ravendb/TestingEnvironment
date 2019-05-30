@@ -130,10 +130,10 @@ namespace Notifier
                         Console.WriteLine($"Out of total={total}");
 
                         var color = "good"; // green
-                        if (fails.Count > 0 ||
-                            notFinished.Count > 0)
+                        if (fails.Count > 0)
                             color = "danger"; // red
-                        else if (total == 0)
+                        else if (total == 0 ||
+                            notFinished.Count > 1)
                             color = "warning"; // yellow                        
 
                         var builder = new ConfigurationBuilder()
@@ -172,8 +172,8 @@ namespace Notifier
 
                         
                         var now = DateTime.Now;
-                        //if (now.Hour >= 9 &&
-                        //    now.Day != lastDaySent)
+                        if (now.Hour >= 9 &&
+                            now.Day != lastDaySent)
                         {
                             Console.WriteLine();
                             Console.WriteLine("Sending:");

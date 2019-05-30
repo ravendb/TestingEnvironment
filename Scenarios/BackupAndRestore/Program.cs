@@ -11,7 +11,7 @@ namespace BackupAndRestore
 
         public static void RunCountersScenarios(string orchestratorUrl)
         {
-            using (var client = new BackupAndRestore(orchestratorUrl, "BackupAndRestore"))
+            using (var client = new BackupAndRestore(orchestratorUrl, "BackupAndRestore", -1))
             {
                 client.Initialize();
                 client.RunTest();

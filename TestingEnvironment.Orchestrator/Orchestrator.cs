@@ -233,8 +233,9 @@ namespace TestingEnvironment.Orchestrator
             }
         }
 
-        public int SetRound(int round)
+        public int SetRound(string roundStr)
         {
+            var round = int.Parse(roundStr);
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
                 var newStaticInfo = new StaticInfo
@@ -244,7 +245,7 @@ namespace TestingEnvironment.Orchestrator
 
                 session.Store(newStaticInfo, "staticInfo/1");
                 session.SaveChanges();
-            }
+            }            
             return round;
         }
 

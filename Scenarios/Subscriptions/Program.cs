@@ -11,7 +11,7 @@ namespace Subscriptions
 
         static void RunSubscriptionScenarios(string orchestratorUrl)
         {
-            using (var client = new FilterAndProjection(orchestratorUrl, "FilterAndProjection"))
+            using (var client = new FilterAndProjection(orchestratorUrl, "FilterAndProjection", -1))
             {
                 client.Initialize();
                 client.RunTest();

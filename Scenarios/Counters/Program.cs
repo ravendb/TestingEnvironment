@@ -9,67 +9,67 @@
 
         static void RunCountersScenarios(string orchestratorUrl)
         {
-            using (var client = new PutCommentsTest(orchestratorUrl, "PutCommentsTest"))
+            using (var client = new PutCommentsTest(orchestratorUrl, "PutCommentsTest", -1))
             {
                 client.Initialize();
                 client.RunTest();
             }
 
-            using (var client = new PutCountersOnCommentsBasedOnTopic(orchestratorUrl, "PutCountersOnCommentsBasedOnTopic"))
+            using (var client = new PutCountersOnCommentsBasedOnTopic(orchestratorUrl, "PutCountersOnCommentsBasedOnTopic", -1))
             {
                 client.Initialize();
                 client.RunTest();
             }
 
-            using (var client = new PutCountersOnCommentsRandomly(orchestratorUrl, "PutCountersOnCommentsRandomly"))
+            using (var client = new PutCountersOnCommentsRandomly(orchestratorUrl, "PutCountersOnCommentsRandomly", -1))
             {
                 client.Initialize();
                 client.RunTest();
             }
 
-            using (var client = new QueryBlogCommentsByTag(orchestratorUrl, "QueryBlogCommentsByTag"))
+            using (var client = new QueryBlogCommentsByTag(orchestratorUrl, "QueryBlogCommentsByTag", -1))
             {
                 client.Initialize();
                 client.RunTest();
             }
 
-            using (var client = new PatchCommentRatingsBasedOnCounters(orchestratorUrl, "PatchCommentRatingsBasedOnCounters"))
+            using (var client = new PatchCommentRatingsBasedOnCounters(orchestratorUrl, "PatchCommentRatingsBasedOnCounters", -1))
             {
                 client.Initialize();
                 client.RunTest();
             }
 
-            using (var client = new QueryBlogCommentsAndIncludeCounters(orchestratorUrl, "QueryBlogCommentsAndIncludeCounters"))
+            using (var client = new QueryBlogCommentsAndIncludeCounters(orchestratorUrl, "QueryBlogCommentsAndIncludeCounters", -1))
             {
                 client.Initialize();
                 client.RunTest();
             }
 
-            using (var client = new LoadBlogCommentsAndIncludeCounters(orchestratorUrl, "LoadBlogCommentsAndIncludeCounters"))
+            using (var client = new LoadBlogCommentsAndIncludeCounters(orchestratorUrl, "LoadBlogCommentsAndIncludeCounters", -1))
             {
                 client.Initialize();
                 client.RunTest();
             }
 
-            using (var client = new IncrementCountersByPatch(orchestratorUrl, "IncrementCountersByPatch"))
+            using (var client = new IncrementCountersByPatch(orchestratorUrl, "IncrementCountersByPatch", -1))
             {
                 client.Initialize();
                 client.RunTest();
             }
 
-            using (var client = new SubscribeToCounterChanges(orchestratorUrl, "SubscribeToCounterChanges"))
+            using (var client = new SubscribeToCounterChanges(orchestratorUrl, "SubscribeToCounterChanges", -1))
             {
                 client.Initialize();
                 client.RunTest();
             }
 
-            using (var client = new IndexQueryOnCounterNames(orchestratorUrl, "IndexQueryOnCounterNames"))
+            using (var client = new IndexQueryOnCounterNames(orchestratorUrl, "IndexQueryOnCounterNames", -1))
             {
                 client.Initialize();
                 client.RunTest();
             }
 
-            using (var client = new CounterRevisions(orchestratorUrl, "CounterRevisions"))
+            using (var client = new CounterRevisions(orchestratorUrl, "CounterRevisions", -1))
             {
                 client.Initialize();
                 client.RunTest();

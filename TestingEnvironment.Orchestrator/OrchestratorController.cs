@@ -62,10 +62,7 @@ namespace TestingEnvironment.Orchestrator
                  Response.AsJson(Orchestrator.Instance.GetRound()));
 
             //PUT http://localhost:5000/set-round?round=345
-            Put("/set-round", @params =>
-            {
-                return Orchestrator.Instance.SetRound(Request.Query.round);
-            });
+            Put("/set-round", @params => Orchestrator.Instance.SetRound(Request.Query.round).ToString());
         }
     }
 }

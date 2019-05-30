@@ -103,12 +103,15 @@ namespace TestingEnvironment.Client
         }
 
         protected int SetRound(int round)
-        {            
+        {
             var currentRound = _orchestratorClient.Get<int>($"/get-round");
             if (round == 0)
                 round = ++currentRound;
             if (round != -1)
-                currentRound = _orchestratorClient.Put<int>($"/set-round?round={round}", "");
+            {
+                var response = _orchestratorClient.Put<dynamic>($"/set-round?round={round}", "");
+                currentRound = int.Parse(response);
+            }
             return currentRound;
         }
 
@@ -117,7 +120,7 @@ namespace TestingEnvironment.Client
             ReportEvent(new EventInfo { Message = $"Setting strategy to {strategy}" });
             var rc = _orchestratorClient.Put<bool>($"/config-selectors?strategyName={Uri.EscapeDataString(strategy)}", "");
             if (rc)
-                ReportSuccess("Successfully set");
+                ReportInfo($"Successfully set strategy to {strategy}");
             else
                 ReportFailure("Failed to set", new Exception($"Failed to /config-selectors?strategyName={strategy}"));
             return rc;
