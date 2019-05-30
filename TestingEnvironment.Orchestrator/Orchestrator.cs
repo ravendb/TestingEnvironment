@@ -108,7 +108,7 @@ namespace TestingEnvironment.Orchestrator
 
             foreach (var clusterInfo in _config.Clusters ?? Enumerable.Empty<ClusterInfo>())
             {
-                var cert = clusterInfo.PemFilePath == null ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(clusterInfo.PemFilePath);
+                var cert = clusterInfo.PemFilePath == null || clusterInfo.PemFilePath.Equals("") ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(clusterInfo.PemFilePath);
                 var store = new DocumentStore
                 {
                     Database = _config.Databases?[0],
@@ -137,8 +137,10 @@ namespace TestingEnvironment.Orchestrator
 
         public ITestConfigSelectorStrategy[] ConfigSelectorStrategies => _configSelectorStrategies;
 
-        public TestConfig RegisterTest(string testName, string testClassName, string author)
-        {
+        public TestConfig RegisterTest(string testName, string testClassName, string author, string round)
+        {            
+            if (int.TryParse(round, out var roundInt) == false)
+                roundInt = -1;
             //decide which servers/database the test will get
             if (_currentConfigSelectorStrategy == null)
                 throw new InvalidOperationException("Something really bad happened... the config selector strategy appears to be null!");
@@ -155,6 +157,7 @@ namespace TestingEnvironment.Orchestrator
                     ExtendedName = $"{testName} ({now})",
                     TestClassName = testClassName,
                     Finished = false,
+                    Round = roundInt,
                     Author = author,
                     Start = now,
                     Events = new List<EventInfoWithExceptionAsString>(),
@@ -183,8 +186,8 @@ namespace TestingEnvironment.Orchestrator
                         var latestTestInfo = session.Query<TestInfo>().FirstOrDefault(x => x.Name == testName);
                         if (latestTestInfo != null)
                         {
-                            latestTestInfo.Finished = true;
-                            latestTestInfo.End = DateTime.UtcNow;
+                            latestTestInfo.Finished = true;                            
+                            latestTestInfo.End = DateTime.UtcNow;                            
                             session.Store(latestTestInfo);
                             session.SaveChanges();
                         }

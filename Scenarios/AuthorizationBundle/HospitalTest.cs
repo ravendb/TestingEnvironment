@@ -10,38 +10,45 @@ namespace AuthorizationBundle
 {
     public class HospitalTest : BaseTest
     {
-        public HospitalTest(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Tal")
+        public HospitalTest(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Tal", round)
         {
 
         }
 
         public override void RunActualTest()
         {
-            using (DocumentStore)
-            {            
-                //ForclyCleanUsers();
-                ReportInfo("Creating root user");
-                _rootUser = GenerateRandomUser();
-                AuthorizedSession.CreateRootUser(DocumentStore, _rootUser.Id, _rootUser.Password);
-                using (var session = AuthorizedSession.OpenSession(DocumentStore, _rootUser.Id, _rootUser.Password))
+            try
+            {
+                using (DocumentStore)
                 {
-                    ReportInfo("Creating groups with members");
-                    GenerateGroups(session);
-                    ReportInfo("Creating orphan users");
-                    GenerateOrphanUsers(session);
-                }
+                    ForclyCleanUsers();
+                    ReportInfo("Creating root user");
+                    _rootUser = GenerateRandomUser();
+                    AuthorizedSession.CreateRootUser(DocumentStore, _rootUser.Id, _rootUser.Password);
+                    using (var session = AuthorizedSession.OpenSession(DocumentStore, _rootUser.Id, _rootUser.Password))
+                    {
+                        ReportInfo("Creating groups with members");
+                        GenerateGroups(session);
+                        ReportInfo("Creating orphan users");
+                        GenerateOrphanUsers();
+                    }
 
-                try
-                {
-                    CleanupTestsEntities();
-                }
-                catch(Exception e)
-                {
-                    //We already cleaned the data
-                    ReportInfo("Exception cleaning up: " + e);
-                }
+                    try
+                    {
+                        CleanupTestsEntities();
+                    }
+                    catch (Exception e)
+                    {
+                        //We already cleaned the data
+                        ReportInfo("Exception cleaning up: " + e);
+                    }
 
-                ReportSuccess("Test was completed successfully");
+                    ReportSuccess("Test was completed successfully");
+                }
+            }
+            catch(Exception e)
+            {
+                ReportFailure("Failed with exception in test", e);
             }
         }
 
@@ -111,10 +118,10 @@ namespace AuthorizationBundle
             }            
         }
 
-        private HashSet<TestUser> OrphanUsers = new HashSet<TestUser>();
-        private void GenerateOrphanUsers(AuthorizedSession session)
+        private readonly HashSet<TestUser> OrphanUsers = new HashSet<TestUser>();
+        private void GenerateOrphanUsers()
         {
-            for (var i = 0; i < 1000; i++)
+            for (var i = 0; i < 300; i++)
             {
                 OrphanUsers.Add(GenerateRandomUser());
             }            
@@ -143,7 +150,7 @@ namespace AuthorizationBundle
             }
         }
 
-        private HashSet<TestGroup> AllGroups = new HashSet<TestGroup>();
+        private readonly HashSet<TestGroup> AllGroups = new HashSet<TestGroup>();
         private TestGroup _rootGroup; 
 
         private TestGroup GenerateGroup(AuthorizedSession session, string parent, string description = null)
@@ -192,7 +199,7 @@ namespace AuthorizationBundle
             return user;
         }
 
-        private HashSet<TestUser> AllUsers = new HashSet<TestUser>();
+        private readonly HashSet<TestUser> AllUsers = new HashSet<TestUser>();
 
         public static int GetStableHashCode(string str)
         {

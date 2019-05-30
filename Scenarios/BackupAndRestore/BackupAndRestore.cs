@@ -19,7 +19,7 @@ namespace BackupAndRestore
 {
     public class BackupAndRestore : BaseTest
     {
-        public BackupAndRestore(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Egor")
+        public BackupAndRestore(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Egor", round)
         { }
 
         private const string _chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -194,20 +194,28 @@ namespace BackupAndRestore
             cts.Cancel();
             await Task.WhenAll(tasks).ConfigureAwait(false);
 
-            CheckBackupStatuses();
-            ClearRestoredDatabases();
+            var success = CheckBackupStatuses();
+            var clearSuccess = ClearRestoredDatabases();
+
 
             ReportInfo($"Ran for {_runTime.Minutes} mins");
-            ReportSuccess("BackupAndRestore Test Finished.");
+
+            if (success && clearSuccess)
+                ReportSuccess("BackupAndRestore Test Finished.");
+            else
+                ReportFailure("BackupAndRestore Test Finished with failures", null);
         }
 
-        private void CheckBackupStatuses()
+        private bool CheckBackupStatuses()
         {
             var success = true;
             for (var i = 0; i < MyBackupsList.Count; i++)
             {
                 if (MyBackupsList[i].RestoreResult == RestoreResult.Failed)
+                {
+                    success = false;
                     ReportFailure("Got Failed Restore", null);
+                }
 
                 if (MyBackupsList[i].OperationStatus == OperationStatus.Faulted)
                 {
@@ -220,6 +228,8 @@ namespace BackupAndRestore
             }
             if (success)
                 ReportInfo("All our Backup and Restore tasks succeeded");
+
+            return success;
         }
 
         private static Task RunTask(Func<Task> task, CancellationTokenSource cts)
@@ -469,12 +479,12 @@ namespace BackupAndRestore
             }
         }
 
-        private void ClearRestoredDatabases()
+        private bool ClearRestoredDatabases()
         {
             if (MyRestoreDbsList.Count == 0)
             {
                 ReportInfo("No Restored Databases to clear.");
-                return;
+                return true;
             }
 
             ReportInfo("Clearing Restored Databases, Please clear the backup .ravendbdump files manually!");
@@ -497,7 +507,9 @@ namespace BackupAndRestore
             catch
             {
                 ReportInfo("Failed to clear the DBs!");
+                return false;
             }
+            return true;
         }
 
         private async Task AddDocs(int actorsCount, int directorsCount, int moviesCount)

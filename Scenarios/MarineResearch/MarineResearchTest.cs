@@ -20,7 +20,7 @@ namespace MarineResearch
     {
         private readonly Random _mRandom = new Random();
 
-        public MarineResearchTest(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Haludi")
+        public MarineResearchTest(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Haludi", round)
         {
         }
 

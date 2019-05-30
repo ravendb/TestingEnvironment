@@ -13,14 +13,16 @@ namespace TestingEnvironment.Client
         public readonly string TestName;
         
         private readonly string _author;
+        private readonly int _round;
 
         protected IDocumentStore DocumentStore;
         protected Random Random = new Random(123);
 
         private readonly JsonServiceClient _orchestratorClient;
 
-        protected BaseTest(string orchestratorUrl, string testName, string author)
+        protected BaseTest(string orchestratorUrl, string testName, string author, int round)
         {
+            _round = round;
             OrchestratorUrl = orchestratorUrl ?? throw new ArgumentNullException(nameof(orchestratorUrl));
             TestName = testName ?? throw new ArgumentNullException(nameof(testName));
             _author = author;
@@ -29,9 +31,9 @@ namespace TestingEnvironment.Client
 
         public virtual void Initialize()
         {
-            var url = $"/register?testName={Uri.EscapeDataString(TestName)}&testClassName={Uri.EscapeDataString(GetType().FullName)}&author={Uri.EscapeDataString(_author)}";
+            var url = $"/register?testName={Uri.EscapeDataString(TestName)}&testClassName={Uri.EscapeDataString(GetType().FullName)}&author={Uri.EscapeDataString(_author)}&round={_round}";
             var config = _orchestratorClient.Put<TestConfig>(url,null);
-            var cert = config.PemFilePath == null ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(config.PemFilePath); // TODO : remove "HasAuthentication"
+            var cert = config.PemFilePath == null || config.PemFilePath.Equals("") ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(config.PemFilePath); // TODO : remove "HasAuthentication"
             DocumentStore = new DocumentStore
             {
                 Urls = config.Urls,
@@ -106,7 +108,7 @@ namespace TestingEnvironment.Client
             if (round == 0)
                 round = ++currentRound;
             if (round != -1)
-                currentRound = _orchestratorClient.Put<int>($"/set-round?round={round}");
+                currentRound = _orchestratorClient.Put<int>($"/set-round?round={round}", "");
             return currentRound;
         }
 

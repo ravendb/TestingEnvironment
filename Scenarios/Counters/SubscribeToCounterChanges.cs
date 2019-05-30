@@ -8,7 +8,7 @@ namespace Counters
 {
     public class SubscribeToCounterChanges : BaseTest
     {
-        public SubscribeToCounterChanges(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
+        public SubscribeToCounterChanges(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Aviv", round)
         {
         }
 
@@ -34,7 +34,7 @@ namespace Counters
             var list = new BlockingCollection<CounterChange>();
             var taskObservable = DocumentStore.Changes();
             taskObservable.EnsureConnectedNow().Wait();
-
+            var success = false;
             try
             {
 
@@ -54,7 +54,7 @@ namespace Counters
                     session.SaveChanges();
                 }
 
-                if (list.TryTake(out var counterChange, TimeSpan.FromSeconds(1)) == false)
+                if (list.TryTake(out var counterChange, TimeSpan.FromMinutes(1)) == false)
                 {
                     ReportFailure("Failed to get counter change after waiting for 1 minute. Aborting", null);
                 }
@@ -62,7 +62,8 @@ namespace Counters
                 if (AssertCounterChange(counterChange, docId, counterName) == false)
                     return;
 
-                ReportSuccess("Asserted valid counter changes. ");
+                ReportInfo("Asserted valid counter changes. "); // success
+                success = true;
 
                 var value = counterChange.Value;
 
@@ -76,28 +77,33 @@ namespace Counters
                     session.SaveChanges();
                 }
 
-                if (list.TryTake(out counterChange, TimeSpan.FromSeconds(1)) == false)
+                if (list.TryTake(out counterChange, TimeSpan.FromMinutes(1)) == false)
                 {
+                    success = false;
                     ReportFailure("Failed to get counter change after waiting for 1 minute. Aborting", null);
                 }
 
                 if (AssertCounterChange(counterChange, docId, counterName, value) == false)
                     return;
 
-                ReportSuccess("Asserted valid counter changes. ");
+                ReportInfo("Asserted valid counter changes. ");
 
             }
             catch (Exception e)
             {
+                success = false;
                 ReportFailure("An error occurred while trying to increment " +
                               "counter and wait for counter changes. Aborting", e);
                 throw;
             }
             finally
             {
+                if (success)
+                {
+                    ReportSuccess("Test ended successfully");
+                }
                 taskObservable?.Dispose();
             }
-
         }
 
         private bool AssertCounterChange(CounterChange counterChange, string docId, string counterName, long? val = null)

@@ -9,8 +9,8 @@ namespace TestsRunner
 {
     public class StrategySet : BaseTest
     {
-        private int _round;
-        public StrategySet(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "TestRunner")
+        private readonly int _round;
+        public StrategySet(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "TestRunner", round)
         {
             _round = round;
         }
