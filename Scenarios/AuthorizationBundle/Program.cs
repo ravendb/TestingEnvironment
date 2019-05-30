@@ -64,7 +64,7 @@ namespace AuthorizationBundle
 
         private static void RunAuthorizationBundleScenarios(string url)
         {
-            using (var client = new HospitalTest(url, "HospitalTest"))
+            using (var client = new HospitalTest(url, "HospitalTest", -1))
             {
                 client.Initialize();
                 client.RunTest();

@@ -9,16 +9,21 @@ namespace TestsRunner
 {
     public class StrategySet : BaseTest
     {
-        private int _round;
-        public StrategySet(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "TestRunner")
+        public int _round;
+        public StrategySet(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "TestRunner", round)
         {
             _round = round;
         }
 
         public override void RunActualTest()
         {
-            SetStrategy("FirstClusterRandomDatabaseSelector");
-            SetRound(_round);
+            var success = SetStrategy("FirstClusterRandomDatabaseSelector");
+            _round = SetRound(_round);
+            ReportInfo($"Round set to {_round}");
+            if (success)
+                ReportSuccess("Finished successfully");
+            else
+                ReportFailure("Finished with failures", null);
         }
     }
 
@@ -42,10 +47,12 @@ namespace TestsRunner
                 stdOut.Flush();
 
                 stdOut.WriteLine("Setting Strategy: FirstClusterRandomDatabaseStrategy");
+                int roundResult = -1;
                 using (var client = new StrategySet(orchestratorUrl, "StrategySet", round))
                 {
                     client.Initialize();
                     client.RunTest();
+                    roundResult = client._round;
                 }
                 stdOut.Flush();
 
@@ -75,7 +82,7 @@ namespace TestsRunner
                    typeof(BackupAndRestore.BackupAndRestore)
                 };
 
-                var ctorTypes = new Type[] { typeof(string), typeof(string) };
+                var ctorTypes = new Type[] { typeof(string), typeof(string), typeof(int) };
                 var testsList = new List<BaseTest>();
                 foreach (var test in tests)
                 {
@@ -84,7 +91,7 @@ namespace TestsRunner
                     var testName = test.Name;
                     var testclass = test.GetConstructor(ctorTypes);
                     stdOut.Write(testName);
-                    var instance = (BaseTest)testclass.Invoke(new object[] { orchestratorUrl, testName });
+                    var instance = (BaseTest)testclass.Invoke(new object[] { orchestratorUrl, testName, roundResult });
                     if (instance == null)
                     {
                         stdOut.WriteLine($"Internal Error: no appropriate Ctor for {testName}");

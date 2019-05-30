@@ -17,14 +17,14 @@ namespace Subscriptions
         private const int ProductsCount = 9;
 
         private static readonly int[] _shipper = new int[ShippersCount];
-        private static int[] _shipperRes = new int[ShippersCount];
+        private static readonly int[] _shipperRes = new int[ShippersCount];
         private static readonly Guid[] _productsGuid = new Guid[ProductsCount];
         private static readonly Guid[] _shipperGuid = new Guid[ShippersCount];
         private readonly LinkedList<Task> _tasks = new LinkedList<Task>();
         private static Guid GenralGuid = Guid.NewGuid();
-        private static CancellationTokenSource[] _shipperCancellationTokenSource = new CancellationTokenSource[ShippersCount];
+        private static readonly CancellationTokenSource[] _shipperCancellationTokenSource = new CancellationTokenSource[ShippersCount];
 
-        public FilterAndProjection(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Efrat")
+        public FilterAndProjection(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Efrat", round)
         {
         }
 

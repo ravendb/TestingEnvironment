@@ -41,7 +41,7 @@ namespace Counters
 
         #endregion
 
-        public IndexQueryOnCounterNames(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
+        public IndexQueryOnCounterNames(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Aviv", round)
         {
         }
 
@@ -68,8 +68,10 @@ namespace Counters
                         .Where(comment => comment.Rating > 0 && comment.CounterNames.Contains("likes"))
                         .Select(x => new
                         {
+#pragma warning disable IDE0037 // Use inferred member name
                             Id = x.Id,
                             CounterNames = x.CounterNames,
+#pragma warning restore IDE0037 // Use inferred member name
                             Likes = session.CountersFor(x).Get("likes")
                         });
 

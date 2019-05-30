@@ -14,14 +14,14 @@ namespace TestingEnvironment.Orchestrator
         private static readonly object Empty = new object();
 
         public OrchestratorController(OrchestratorConfiguration config)
-        {
-            
+        {            
             _config = config;
             Put("/register", @params => 
                 Orchestrator.Instance.RegisterTest(
                     Uri.UnescapeDataString((string) Request.Query.testName), 
                     Uri.UnescapeDataString((string) Request.Query.testClassName),
-                    Uri.UnescapeDataString((string) Request.Query.author)));
+                    Uri.UnescapeDataString((string) Request.Query.author),
+                    Uri.UnescapeDataString((string) Request.Query.round)));
 
             Put("/unregister", @params =>
             {
@@ -61,10 +61,8 @@ namespace TestingEnvironment.Orchestrator
             Get<dynamic>("/get-round", _ =>
                  Response.AsJson(Orchestrator.Instance.GetRound()));
 
-            Put("/set-round", @params =>
-            {
-                return Orchestrator.Instance.SetRound((int)Request.Query.round);
-            });
+            //PUT http://localhost:5000/set-round?round=345
+            Put("/set-round", @params => Orchestrator.Instance.SetRound(Request.Query.round).ToString());
         }
     }
 }

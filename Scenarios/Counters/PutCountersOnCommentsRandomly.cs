@@ -7,7 +7,7 @@ namespace Counters
 {
     public class PutCountersOnCommentsRandomly : BaseTest
     {
-        public PutCountersOnCommentsRandomly(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
+        public PutCountersOnCommentsRandomly(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Aviv", round)
         {
         }
 

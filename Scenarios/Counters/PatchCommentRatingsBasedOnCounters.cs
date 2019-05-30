@@ -8,7 +8,7 @@ namespace Counters
 {
     public class PatchCommentRatingsBasedOnCounters : BaseTest
     {
-        public PatchCommentRatingsBasedOnCounters(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Aviv")
+        public PatchCommentRatingsBasedOnCounters(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Aviv", round)
         {
         }
 
