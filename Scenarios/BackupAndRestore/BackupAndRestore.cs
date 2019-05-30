@@ -491,12 +491,12 @@ namespace BackupAndRestore
             }
         }
 
-        private void ClearRestoredDatabases()
+        private bool ClearRestoredDatabases()
         {
             if (MyRestoreDbsList.Count == 0)
             {
                 ReportInfo("No Restored Databases to clear.");
-                return;
+                return true;
             }
 
             ReportInfo("Clearing Restored Databases, Please clear the backup .ravendbdump files manually!");
@@ -519,7 +519,9 @@ namespace BackupAndRestore
             catch
             {
                 ReportInfo("Failed to clear the DBs!");
+                return false;
             }
+            return true;
         }
 
         private async Task AddDocs(int actorsCount, int directorsCount, int moviesCount)
