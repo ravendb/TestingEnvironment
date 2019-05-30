@@ -1,15 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.Client.Documents.Operations;
+﻿using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.ServerWide.Operations;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using TestingEnvironment.Client;
 
 // ReSharper disable InconsistentNaming
@@ -33,10 +32,10 @@ namespace BackupAndRestore
 
         private const int _numberOfCompareExchange = 2_500;
 
-        private static readonly TimeSpan _runTime = TimeSpan.FromMinutes(9);
+        private readonly TimeSpan _runTime = TimeSpan.FromMinutes(9);
 
-        private static readonly List<MyBackup> MyBackupsList = new List<MyBackup>();
-        private static readonly List<MyRestoredDB> MyRestoreDbsList = new List<MyRestoredDB>();
+        private readonly List<MyBackup> MyBackupsList = new List<MyBackup>();
+        private readonly List<MyRestoredDB> MyRestoreDbsList = new List<MyRestoredDB>();
 
         public enum RestoreResult
         {
@@ -145,7 +144,7 @@ namespace BackupAndRestore
                         try
                         {
                             var restore = MyBackupsList.First(x => (x.OperationStatus == OperationStatus.Completed && x.RestoreResult == RestoreResult.None));
-                            ReportInfo("Started a restore");
+                            ReportInfo($"Started a restore {restore.BackupTaskId}");
                             await RestoreBackup(restore).ConfigureAwait(false);
                             ReportInfo($"Restored backup task: {restore.BackupTaskId} with path: {restore.BackupPath}");
                         }
@@ -194,14 +193,17 @@ namespace BackupAndRestore
             cts.Cancel();
             await Task.WhenAll(tasks).ConfigureAwait(false);
 
-            CheckBackupStatuses();
+            var success = CheckBackupStatuses();
             ClearRestoredDatabases();
 
             ReportInfo($"Ran for {_runTime.Minutes} mins");
-            ReportSuccess("BackupAndRestore Test Finished.");
+            if (success)
+                ReportSuccess("BackupAndRestore test finished successfully.");
+            else
+                ReportFailure("BackupAndRestore test failed.", null);
         }
 
-        private void CheckBackupStatuses()
+        private bool CheckBackupStatuses()
         {
             var success = true;
             for (var i = 0; i < MyBackupsList.Count; i++)
@@ -220,9 +222,11 @@ namespace BackupAndRestore
             }
             if (success)
                 ReportInfo("All our Backup and Restore tasks succeeded");
+
+            return success;
         }
 
-        private static Task RunTask(Func<Task> task, CancellationTokenSource cts)
+        private Task RunTask(Func<Task> task, CancellationTokenSource cts)
         {
             return Task.Run(async () =>
             {
@@ -435,26 +439,39 @@ namespace BackupAndRestore
                 {
                     ReportInfo($"Starting to restore DB: {restoreDbName}");
                     var re = DocumentStore.GetRequestExecutor(DocumentStore.Database);
-                    var restoreBackupTaskCommand = restoreBackupTask.GetCommand(DocumentStore.Conventions, session.Advanced.Context);
+                    var restoreBackupTaskCommand =
+                        restoreBackupTask.GetCommand(DocumentStore.Conventions, session.Advanced.Context);
                     await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
-                        null, session.Advanced.Context, restoreBackupTaskCommand, shouldRetry: false).ConfigureAwait(false);
+                            null, session.Advanced.Context, restoreBackupTaskCommand, shouldRetry: false)
+                        .ConfigureAwait(false);
 
-                    var getOperationStateTask = new GetOperationStateOperation(restoreBackupTaskCommand.Result.OperationId);
-                    var getOperationStateTaskCommand = getOperationStateTask.GetCommand(DocumentStore.Conventions, session.Advanced.Context);
+                    var getOperationStateTask =
+                        new GetOperationStateOperation(restoreBackupTaskCommand.Result.OperationId);
+                    var getOperationStateTaskCommand =
+                        getOperationStateTask.GetCommand(DocumentStore.Conventions, session.Advanced.Context);
 
                     await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
-                        null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false).ConfigureAwait(false);
+                            null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false)
+                        .ConfigureAwait(false);
 
                     while (getOperationStateTaskCommand.Result.Status == OperationStatus.InProgress)
                     {
                         await Task.Delay(2000).ConfigureAwait(false);
                         await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
-                            null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false).ConfigureAwait(false);
+                                null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false)
+                            .ConfigureAwait(false);
                     }
+                }
+                catch (RavenException re)
+                {
+                    if (re.InnerException is ArgumentException ae)
+                        ReportInfo($"Probably somebody deleted the backup files, taskID {backup.BackupTaskId}, exception: {ae}");
+                    else
+                        ReportFailure($"Restoring DB: {restoreDbName} Failed, taskID {backup.BackupTaskId}", re);
                 }
                 catch (Exception e)
                 {
-                    ReportFailure($"Restoring DB: {restoreDbName} Failed", e);
+                    ReportFailure($"Restoring DB: {restoreDbName} Failed, taskID {backup.BackupTaskId}", e);
                     succeeded = false;
                 }
 
