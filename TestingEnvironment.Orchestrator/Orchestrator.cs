@@ -123,6 +123,73 @@ namespace TestingEnvironment.Orchestrator
             }
         }
 
+        public RoundResults GetRoundResults(string roundStr)
+        {
+            var rc = new RoundResults();
+
+            if (int.TryParse(roundStr, out rc.Round) == false)
+            {
+                throw new InvalidDataException("Invalid round number specified");
+            }
+
+            using (var session = _reportingDocumentStore.OpenAsyncSession())
+            {
+
+                var results = session.Query<TestInfo, FailTestsComplete>().Where(x => x.Round == rc.Round, true).ToListAsync().Result;
+                var fails = new Dictionary<string, int>();
+                var notFinished = new Dictionary<string, int>();
+
+                int k = 0;
+                rc.FailTestInfoDetails = new TestInfo[results.Count];
+                foreach (var item in results)
+                {
+                    rc.FailTestInfoDetails[k++] = item;
+                    if (item.Finished == true)
+                    {
+                        if (fails.ContainsKey(item.Name))
+                            fails[item.Name] = fails[item.Name] + 1;
+                        else
+                            fails[item.Name] = 1;
+                        ++rc.TotalFailures;
+                    }
+                    else
+                    {
+                        if (notFinished.ContainsKey(item.Name))
+                            notFinished[item.Name] = notFinished[item.Name] + 1;
+                        else
+                            notFinished[item.Name] = 1;
+                        ++rc.TotalStillRunning;
+                    }
+                }
+
+                rc.TotalTestsInRound = session.Query<TestInfo>().Where(x => x.Author != "TestRunner", true).CountAsync().Result;
+                rc.UniqueFailCount = fails.Count;
+
+                int i = 0;
+                foreach (var item in fails)
+                {
+                    rc.UniqueTestsDetailsInfo[i].TestName = item.Key;
+                    rc.UniqueTestsDetailsInfo[i].FailCount = item.Value;
+                    ++i;
+                }
+
+                foreach (var item in results)
+                {
+
+                    rc.RoundStatus = "good"; // green
+                    if (fails.Count > 0)
+                        rc.RoundStatus = "danger"; // red
+                    else if (rc.TotalTestsInRound == 0 ||
+                        notFinished.Count > 1)
+                        rc.RoundStatus = "warning"; // yellow                        
+
+
+                }
+
+                return rc;
+            }
+        }
+
         public bool TrySetConfigSelectorStrategy(string strategyName)
         {
             var strategy = _configSelectorStrategies.FirstOrDefault(x =>
@@ -138,7 +205,7 @@ namespace TestingEnvironment.Orchestrator
         public ITestConfigSelectorStrategy[] ConfigSelectorStrategies => _configSelectorStrategies;
 
         public TestConfig RegisterTest(string testName, string testClassName, string author, string round)
-        {            
+        {
             if (int.TryParse(round, out var roundInt) == false)
                 roundInt = -1;
             //decide which servers/database the test will get
@@ -186,8 +253,8 @@ namespace TestingEnvironment.Orchestrator
                         var latestTestInfo = session.Query<TestInfo>().FirstOrDefault(x => x.Name == testName);
                         if (latestTestInfo != null)
                         {
-                            latestTestInfo.Finished = true;                            
-                            latestTestInfo.End = DateTime.UtcNow;                            
+                            latestTestInfo.Finished = true;
+                            latestTestInfo.End = DateTime.UtcNow;
                             session.Store(latestTestInfo);
                             session.SaveChanges();
                         }
@@ -245,7 +312,7 @@ namespace TestingEnvironment.Orchestrator
 
                 session.Store(newStaticInfo, "staticInfo/1");
                 session.SaveChanges();
-            }            
+            }
             return round;
         }
 

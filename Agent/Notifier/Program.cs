@@ -23,53 +23,56 @@ namespace Notifier
 
             while (true)
             {
-                Console.WriteLine();
-                using (var store = new DocumentStore
+                try
                 {
-                    Urls = new[] { url },
-                    Database = "Orchestrator"
-                }.Initialize())
-                {
-                    Console.WriteLine($"{DateTime.Now} Read index results...");
-                    using (var session = store.OpenAsyncSession())
+                    Console.WriteLine();
+                    using (var store = new DocumentStore
                     {
-                        var roundResult = session.LoadAsync<StaticInfo>("staticInfo/1").Result;
-                        var round = roundResult.Round;                        
-                        var results = session.Query<TestInfo, TestingEnvironment.Orchestrator.FailTestsComplete>().ToListAsync().Result;
-                        Console.WriteLine("Total=" + results.Count);
-                        var fails = new Dictionary<string, int>();
-                        var notFinished = new Dictionary<string, int>();
-                        var totalFailuresCount = 0;
-                        var totalNotCompletedCount = 0;
-
-                        foreach (var item in results)
+                        Urls = new[] { url },
+                        Database = "Orchestrator"
+                    }.Initialize())
+                    {
+                        Console.WriteLine($"{DateTime.Now} Read index results...");
+                        using (var session = store.OpenAsyncSession())
                         {
-                            if (item.Finished == true)
-                            {
-                                if (fails.ContainsKey(item.Name))
-                                    fails[item.Name] = fails[item.Name] + 1;
-                                else
-                                    fails[item.Name] = 1;
-                                ++totalFailuresCount;
-                            }
-                            else
-                            {
-                                if (notFinished.ContainsKey(item.Name))
-                                    notFinished[item.Name] = notFinished[item.Name] + 1;
-                                else
-                                    notFinished[item.Name] = 1;
-                                ++totalNotCompletedCount;
-                            }
-                        }
+                            var roundResult = session.LoadAsync<StaticInfo>("staticInfo/1").Result;
+                            var round = roundResult.Round;
+                            var results = session.Query<TestInfo, TestingEnvironment.Orchestrator.FailTestsComplete>().Where(x => x.Round == round, true).ToListAsync().Result;
+                            Console.WriteLine("Total=" + results.Count);
+                            Console.WriteLine("Round=" + round);
+                            var fails = new Dictionary<string, int>();
+                            var notFinished = new Dictionary<string, int>();
+                            var totalFailuresCount = 0;
+                            var totalNotCompletedCount = 0;
 
-                        var failureText = new StringBuilder();
-                        bool first = true;
-                        Console.WriteLine();
-                        Console.WriteLine("Failed:");
-                        Console.WriteLine("======");
-                        if (fails.Count > 0)
-                        {
-                            failureText.Append(@"
+                            foreach (var item in results)
+                            {
+                                if (item.Finished == true)
+                                {
+                                    if (fails.ContainsKey(item.Name))
+                                        fails[item.Name] = fails[item.Name] + 1;
+                                    else
+                                        fails[item.Name] = 1;
+                                    ++totalFailuresCount;
+                                }
+                                else
+                                {
+                                    if (notFinished.ContainsKey(item.Name))
+                                        notFinished[item.Name] = notFinished[item.Name] + 1;
+                                    else
+                                        notFinished[item.Name] = 1;
+                                    ++totalNotCompletedCount;
+                                }
+                            }
+
+                            var failureText = new StringBuilder();
+                            bool first = true;
+                            Console.WriteLine();
+                            Console.WriteLine("Failed:");
+                            Console.WriteLine("======");
+                            if (fails.Count > 0)
+                            {
+                                failureText.Append(@"
                                                     {
                                                         ""title"": ""*_Failures_*"",
                                                         ""value"": ""Unique Tests Count: " + fails.Count + @""",
@@ -77,75 +80,75 @@ namespace Notifier
                                                     },
                                 ");
 
-                            failureText.Append(@"
+                                failureText.Append(@"
                                                 {
                                                     ""title"": ""Test Names (FailCount):"",
                                                     ""value"": """);
-                            foreach (var kv in fails)
-                            {
-                                if (first)
-                                    first = false;
-                                else
-                                    failureText.Append(", ");
+                                foreach (var kv in fails)
+                                {
+                                    if (first)
+                                        first = false;
+                                    else
+                                        failureText.Append(", ");
 
-                                Console.WriteLine($"{ kv.Key} = {kv.Value}");
+                                    Console.WriteLine($"{ kv.Key} = {kv.Value}");
 
-                                failureText.Append($"{kv.Key}({kv.Value})");
-                            }
-                            failureText.Append(@""",  ""short"": true
+                                    failureText.Append($"{kv.Key}({kv.Value})");
+                                }
+                                failureText.Append(@""",  ""short"": true
                                                 },
                             ");
-                        }
+                            }
 
-                        var notFinishedText = new StringBuilder();
+                            var notFinishedText = new StringBuilder();
 
-                        Console.WriteLine();
-                        Console.WriteLine("Not Finished:");
-                        Console.WriteLine("============ ");
-                        first = true;
-                        foreach (var kv in notFinished)
-                        {
-                            if (first)
+                            Console.WriteLine();
+                            Console.WriteLine("Not Finished:");
+                            Console.WriteLine("============ ");
+                            first = true;
+                            foreach (var kv in notFinished)
                             {
-                                notFinishedText.Append(@"
+                                if (first)
+                                {
+                                    notFinishedText.Append(@"
                                                         {
                                                             ""title"": ""*_Not Completed_*"",
                                                             ""value"": ""Unique Tests Count: " + notFinished.Count + @""",
                                                             ""short"": false
                                                         },
                                 ");
-                                first = false;
-                            }
-                            Console.WriteLine($"{kv.Key} = {kv.Value}");
-                            notFinishedText.Append(@"
+                                    first = false;
+                                }
+                                Console.WriteLine($"{kv.Key} = {kv.Value}");
+                                notFinishedText.Append(@"
                                                     {
                                                         ""title"": """ + kv.Key + @""",
                                                         ""value"": ""Count: " + kv.Value + @""",
                                                         ""short"": true
                                                     },
                             ");
-                        }
+                            }
 
-                        var total = session.Query<TestInfo>().Where(x => x.Author != "TestRunner", true).CountAsync().Result;
-                        Console.WriteLine($"Out of total={total}");
+                            var total = session.Query<TestInfo>().Where(x => x.Author != "TestRunner", true).CountAsync().Result;
+                            Console.WriteLine($"Out of total={total}");
 
-                        var color = "good"; // green
-                        if (fails.Count > 0)
-                            color = "danger"; // red
-                        else if (total == 0 ||
-                            notFinished.Count > 1)
-                            color = "warning"; // yellow                        
+                            var color = "good"; // green
+                            if (fails.Count > 0)
+                                color = "danger"; // red
+                            else if (total == 0 ||
+                                notFinished.Count > 1)
+                                color = "warning"; // yellow                        
 
-                        var builder = new ConfigurationBuilder()
-                            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                            .SetBasePath(Environment.CurrentDirectory);
-                        var config = builder.Build();
-                        var appConfig = new NotifierConfig();
-                        ConfigurationBinder.Bind(config, appConfig);
-                        
-                        string msgstring = @"
+                            var builder = new ConfigurationBuilder()
+                                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                                .SetBasePath(Environment.CurrentDirectory);
+                            var config = builder.Build();
+                            var appConfig = new NotifierConfig();
+                            ConfigurationBinder.Bind(config, appConfig);
+
+                            string msgstring = @"
                                             {   
-                                                ""Username"": """+ appConfig.UserEmail + @""",
+                                                ""Username"": """ + appConfig.UserEmail + @""",
                                                 ""Channel"": """ + appConfig.UserName + @""",
                                                 ""attachments"": [
                                                     {
@@ -170,35 +173,40 @@ namespace Notifier
                                             }
                                             ";
 
-                        
-                        var now = DateTime.Now;
-                        if (now.Hour >= 9 &&
-                            now.Day != lastDaySent)
-                        {
-                            Console.WriteLine();
-                            Console.WriteLine("Sending:");
-                            Console.WriteLine(msgstring);
 
-                            lastDaySent = now.Day;
-                            using (WebClient client = new WebClient())
+                            var now = DateTime.Now;
+                            if (now.Hour >= 9 &&
+                                now.Day != lastDaySent)
                             {
-                                NameValueCollection data = new NameValueCollection
-                                {
-                                    ["payload"] = msgstring
-                                };
-                                var response = client.UploadValues(appConfig.Uri, "POST", data);
-
-                                //The response text is usually "ok"
-                                string responseText = Encoding.UTF8.GetString(response);
                                 Console.WriteLine();
-                                Console.WriteLine(responseText);
-                                Console.WriteLine("Done");
-                                round++;
+                                Console.WriteLine("Sending:");
+                                Console.WriteLine(msgstring);
+
+                                lastDaySent = now.Day;
+                                using (WebClient client = new WebClient())
+                                {
+                                    NameValueCollection data = new NameValueCollection
+                                    {
+                                        ["payload"] = msgstring
+                                    };
+                                    var response = client.UploadValues(appConfig.Uri, "POST", data);
+
+                                    //The response text is usually "ok"
+                                    string responseText = Encoding.UTF8.GetString(response);
+                                    Console.WriteLine();
+                                    Console.WriteLine(responseText);
+                                    Console.WriteLine("Done");
+                                    round++;
+                                }
                             }
                         }
                     }
                 }
-
+                catch (Exception e)
+                {
+                    Console.WriteLine("ERROR:");
+                    Console.WriteLine(e);
+                }
                 Thread.Sleep(TimeSpan.FromHours(1));
             }
         }
