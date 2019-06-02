@@ -38,6 +38,7 @@ namespace TestingEnvironment.Orchestrator
                                test.Id,
                                test.Start,
                                test.Name,
+                               test.Round,
                                test.Config,
                                test.Author,
                                test.ExtendedName,
