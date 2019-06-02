@@ -142,8 +142,7 @@ namespace TestingEnvironment.Orchestrator
                 int k = 0;
                 rc.FailTestInfoDetails = new TestInfo[results.Count];
                 foreach (var item in results)
-                {
-                    rc.FailTestInfoDetails[k++] = item;
+                {                    
                     if (item.Finished == true)
                     {
                         if (fails.ContainsKey(item.Name))
@@ -160,14 +159,18 @@ namespace TestingEnvironment.Orchestrator
                             notFinished[item.Name] = 1;
                         ++rc.TotalStillRunning;
                     }
+                    rc.FailTestInfoDetails[k] = item;
+                    k++;
                 }
 
-                rc.TotalTestsInRound = session.Query<TestInfo>().Where(x => x.Author != "TestRunner", true).CountAsync().Result;
+                rc.TotalTestsInRound = session.Query<TestInfo>().Where(x => x.Author != "TestRunner" && x.Round == rc.Round, true).CountAsync().Result;
                 rc.UniqueFailCount = fails.Count;
 
                 int i = 0;
+                rc.UniqueTestsDetailsInfo = new UniqueTestsDetails[fails.Count];
                 foreach (var item in fails)
                 {
+                    rc.UniqueTestsDetailsInfo[i] = new UniqueTestsDetails();
                     rc.UniqueTestsDetailsInfo[i].TestName = item.Key;
                     rc.UniqueTestsDetailsInfo[i].FailCount = item.Value;
                     ++i;

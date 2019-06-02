@@ -16,10 +16,11 @@ namespace Notifier
     {
         public static void Main(string[] args)
         {
-            var url = args[0];
+            var ravendbUrl = args[0];
+            var orchestratorUrl = args[1];
 
             int lastDaySent = DateTime.Now.Day;            
-            Console.WriteLine($"Notifier of Embedded Server : {url}");
+            Console.WriteLine($"Notifier of Embedded Server : {ravendbUrl}");
 
             while (true)
             {
@@ -28,7 +29,7 @@ namespace Notifier
                     Console.WriteLine();
                     using (var store = new DocumentStore
                     {
-                        Urls = new[] { url },
+                        Urls = new[] { ravendbUrl },
                         Database = "Orchestrator"
                     }.Initialize())
                     {
@@ -156,18 +157,17 @@ namespace Notifier
                                                         ""color"": """ + color + @""",
                                                         ""pretext"": ""Testing Environment Results"",
                                                         ""author_name"": ""Round " + round + @" (Click to view)"",
-                                                        ""author_link"": """ + url + @"/studio/index.html#databases/query/index/FailTestsComplete?&database=Orchestrator"",
+                                                        ""author_link"": """ + orchestratorUrl + @"/round-results?round=" + round + @""",
                                                         ""author_icon"": ""https://ravendb.net/img/team/adi_avivi.jpg"",
-                                                        ""title"": ""Total Tests: " + total + @" | Total Failures: " + totalFailuresCount + @" | Still Running: " + totalNotCompletedCount + @""",
-                                                        ""text"": ""\n\n"",
+                                                        ""title"": ""Total Tests: " + total + @" | Total Failures: " + totalFailuresCount + @" | Still Running: " + totalNotCompletedCount + @""",                                                        
+                                                        ""text"": ""<" + ravendbUrl + @"/studio/index.html#databases/query/index/FailTestsComplete?&database=Orchestrator|RavenDB Studio> - See all rounds errors\n"",
                                                         ""fields"": [
                                                                     " + /*notFinishedText.ToString()*/ "" + @"
                                                             " + failureText.ToString() + @"                        
                                                         ],                        
                                                         ""thumb_url"": ""https://ravendb.net/img/home/raven.png"",
                                                         ""footer"": ""The results were generated at " + DateTime.Now + @""",
-                                                        ""footer_icon"": ""https://platform.slack-edge.com/img/default_application_icon.png"",
-                                                        ""ts"": 123456789
+                                                        ""footer_icon"": ""https://platform.slack-edge.com/img/default_application_icon.png""                                                        
                                                     }
                                                 ]
                                             }
