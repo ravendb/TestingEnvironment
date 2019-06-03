@@ -459,7 +459,7 @@ namespace BackupAndRestore
                             null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false)
                         .ConfigureAwait(false);
 
-                    while (getOperationStateTaskCommand.Result.Status == OperationStatus.InProgress)
+                    while (getOperationStateTaskCommand.Result == null || getOperationStateTaskCommand.Result.Status == OperationStatus.InProgress)
                     {
                         await Task.Delay(2000).ConfigureAwait(false);
                         await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
