@@ -416,7 +416,7 @@ namespace BackupAndRestore
 
                     MyBackupsList[i].OperationStatus = operationStatus;
                     MyBackupsList[i].BackupStatus = backupStatus;
-                    MyBackupsList[i].BackupPath = $@"{_backupPath}\{MyBackupsList[i].Guid}\{backupStatus.FolderName}";
+                    MyBackupsList[i].BackupPath = backupStatus.LocalBackup.BackupDirectory;
                     MyBackupsList[i].IsBackupCompleted = true;
 
                     break;
