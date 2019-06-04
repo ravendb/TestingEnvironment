@@ -4,6 +4,7 @@ using Raven.Client.Documents;
 using ServiceStack;
 using TestingEnvironment.Common;
 using System.Net;
+using System.Threading;
 
 namespace TestingEnvironment.Client
 {
@@ -129,7 +130,7 @@ namespace TestingEnvironment.Client
 
         public virtual void Dispose()
         {
-            _orchestratorClient.Put<object>($"/unregister?testName={TestName}",null);
+            _orchestratorClient.Put<object>($"/unregister?testName={TestName}&round={_round}",null);
 
             _orchestratorClient.Dispose();
             DocumentStore.Dispose();

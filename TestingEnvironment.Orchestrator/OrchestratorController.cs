@@ -25,7 +25,7 @@ namespace TestingEnvironment.Orchestrator
 
             Put("/unregister", @params =>
             {
-                Orchestrator.Instance.UnregisterTest(Uri.UnescapeDataString((string) Request.Query.testName));
+                Orchestrator.Instance.UnregisterTest(Uri.UnescapeDataString((string) Request.Query.testName), Uri.UnescapeDataString((string)Request.Query.round));
                 return Empty;
             });
 

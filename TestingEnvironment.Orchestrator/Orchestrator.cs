@@ -242,7 +242,7 @@ namespace TestingEnvironment.Orchestrator
         }
 
         //mostly needed to detect if some client is stuck/hang out    
-        public void UnregisterTest(string testName)
+        public void UnregisterTest(string testName, string roundStr)
         {
             TestInfo latestTestInfo = null;
             var sp = Stopwatch.StartNew();
@@ -250,10 +250,23 @@ namespace TestingEnvironment.Orchestrator
             {
                 try
                 {
+                    var round = int.Parse(roundStr);
                     using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
                     {
                         session.Advanced.UseOptimisticConcurrency = true;
-                        latestTestInfo = session.Query<TestInfo>().FirstOrDefault(x => x.Name == testName);
+                        var latestTestInfos = session.Query<TestInfo>().Where(x => x.Name == testName && x.Round == round).ToList();
+
+                        var biggest = 0;                        
+                        foreach (var item in latestTestInfos)
+                        {
+                            var num = int.Parse(item.Id.Split("/")[1].Split("-")[0]);
+                            if (num > biggest)
+                            {
+                                latestTestInfo = item;
+                                biggest = num;
+                            }
+                        }
+
                         if (latestTestInfo != null)
                         {
                             latestTestInfo.Finished = true;

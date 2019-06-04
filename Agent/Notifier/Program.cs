@@ -149,7 +149,7 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                             ");
                             }
 
-                            var total = session.Query<TestInfo>().Where(x => x.Author != "TestRunner", true).CountAsync().Result;
+                            var total = session.Query<TestInfo>().Where(x => x.Author != "TestRunner" && x.Round == round, true).CountAsync().Result;
                             Console.WriteLine($"Out of total={total}");
 
                             var color = "good"; // green
