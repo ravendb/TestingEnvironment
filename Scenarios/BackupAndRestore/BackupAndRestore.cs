@@ -35,7 +35,7 @@ namespace BackupAndRestore
         private readonly TimeSpan _runTime = TimeSpan.FromMinutes(9);
 
         private readonly List<MyBackup> MyBackupsList = new List<MyBackup>();
-        private readonly List<MyRestoredDB> MyRestoreDbsList = new List<MyRestoredDB>();
+        private readonly List<string> MyRestoreDbsList = new List<string>();
 
         public enum RestoreResult
         {
@@ -197,7 +197,7 @@ namespace BackupAndRestore
             var clearSuccess = ClearRestoredDatabases();
 
 
-            ReportInfo($"Ran for {_runTime.Minutes} mins");
+            ReportInfo($"Ran for {s.Elapsed.Minutes} of {_runTime.Minutes} mins");
 
             if (success && clearSuccess)
                 ReportSuccess("BackupAndRestore Test Finished.");
@@ -416,7 +416,7 @@ namespace BackupAndRestore
 
                     MyBackupsList[i].OperationStatus = operationStatus;
                     MyBackupsList[i].BackupStatus = backupStatus;
-                    MyBackupsList[i].BackupPath = $@"{_backupPath}\{MyBackupsList[i].Guid}\{backupStatus.FolderName}";
+                    MyBackupsList[i].BackupPath = backupStatus.LocalBackup.BackupDirectory;
                     MyBackupsList[i].IsBackupCompleted = true;
 
                     break;
@@ -459,7 +459,7 @@ namespace BackupAndRestore
                             null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false)
                         .ConfigureAwait(false);
 
-                    while (getOperationStateTaskCommand.Result.Status == OperationStatus.InProgress)
+                    while (getOperationStateTaskCommand.Result == null || getOperationStateTaskCommand.Result.Status == OperationStatus.InProgress)
                     {
                         await Task.Delay(2000).ConfigureAwait(false);
                         await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
@@ -479,6 +479,8 @@ namespace BackupAndRestore
                     ReportFailure($"Restoring DB: {restoreDbName} Failed, taskID {backup.BackupTaskId}", e);
                     succeeded = false;
                 }
+
+                MyRestoreDbsList.Add(restoreDbName);
 
                 for (var i = 0; i < MyBackupsList.Count; i++)
                 {
@@ -500,25 +502,18 @@ namespace BackupAndRestore
             }
 
             ReportInfo("Clearing Restored Databases, Please clear the backup .ravendbdump files manually!");
-            var dbNames = new string[MyRestoreDbsList.Count];
-
-            for (var i = 0; i < MyRestoreDbsList.Count; i++)
-            {
-                dbNames[i] = MyRestoreDbsList[i].Name;
-            }
-
             try
             {
                 DocumentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(new DeleteDatabasesOperation.Parameters
                 {
-                    DatabaseNames = dbNames,
+                    DatabaseNames = MyRestoreDbsList.ToArray(),
                     HardDelete = true,
                     TimeToWaitForConfirmation = TimeSpan.FromSeconds(300)
                 }));
             }
-            catch
+            catch (Exception e)
             {
-                ReportInfo("Failed to clear the DBs!");
+                ReportInfo($"Failed to clear the DBs! {e}");
                 return false;
             }
             return true;
@@ -592,12 +587,6 @@ namespace BackupAndRestore
                 await DocumentStore.Operations.SendAsync(
                     new PutCompareExchangeValueOperation<int>(new string(Enumerable.Repeat(_chars, 255).Select(x => x[rnd.Next(x.Length)]).ToArray()), rnd.Next(0, int.MaxValue), 0)).ConfigureAwait(false);
             }
-        }
-
-        public class MyRestoredDB
-        {
-            public string Name { get; set; }
-            public string NodeTag { get; set; }
         }
 
         public class MyBackup
