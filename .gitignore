@@ -22,3 +22,4 @@ packages
 securestring*.txt
 TEOutWindows/
 TEOutLinux/
+appsettings.json
