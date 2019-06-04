@@ -62,16 +62,17 @@ namespace TestsRunner
                 stdOut.Write("Loading Tests: ");
 
                 var tests = new Type[]
-                {
-                   typeof(AuthorizationBundle.HospitalTest),
+                {                   
                    typeof(BlogComment.Program.PutCommentsTest),
-                   typeof(CorruptedCasino.Casino),
                    typeof(Counters.PutCommentsTest),
                    typeof(Counters.PutCountersOnCommentsBasedOnTopic),
                    typeof(Counters.PutCountersOnCommentsRandomly),
                    typeof(Counters.QueryBlogCommentsByTag),
+                   typeof(AuthorizationBundle.HospitalTest),
+                   typeof(CorruptedCasino.Casino),                   
                    typeof(Counters.PatchCommentRatingsBasedOnCounters),
                    typeof(Counters.QueryBlogCommentsAndIncludeCounters),
+                   typeof(BackupTaskCleaner.BackupTaskCleaner),
                    typeof(Counters.LoadBlogCommentsAndIncludeCounters),
                    typeof(Counters.IncrementCountersByPatch),
                    typeof(Counters.SubscribeToCounterChanges),

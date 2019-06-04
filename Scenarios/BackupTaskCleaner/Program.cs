@@ -1,4 +1,6 @@
-﻿namespace TaskCleaner
+﻿using System;
+
+namespace BackupTaskCleaner
 {
     public class Program
     {
@@ -9,7 +11,7 @@
 
         public static void RunTaskCleanerScenario(string orchestratorUrl)
         {
-            using (var client = new TaskCleaner(orchestratorUrl, "TaskCleaner"))
+            using (var client = new BackupTaskCleaner(orchestratorUrl, "BackupTaskCleaner", -1))
             {
                 client.Initialize();
                 client.RunTest();

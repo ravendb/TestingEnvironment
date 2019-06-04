@@ -3,14 +3,11 @@ using Raven.Client.ServerWide.Operations;
 using System.Threading.Tasks;
 using TestingEnvironment.Client;
 
-// ReSharper disable InconsistentNaming
-// ReSharper disable FieldCanBeMadeReadOnly.Local
-
-namespace TaskCleaner
+namespace BackupTaskCleaner
 {
-    public class TaskCleaner : BaseTest
+    public class BackupTaskCleaner : BaseTest
     {
-        public TaskCleaner(string orchestratorUrl, string testName) : base(orchestratorUrl, testName, "Egor")
+        public BackupTaskCleaner(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Egor", round)
         {
         }
 
@@ -33,6 +30,13 @@ namespace TaskCleaner
             {
                 var dbRecord = await DocumentStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db));
                 var pbTasksCount = dbRecord.PeriodicBackups.Count;
+
+                if (pbTasksCount < 5)
+                {
+                    ReportSuccess($"PeriodicBackups.Count {pbTasksCount} < 5 .. skipping..");
+                    return;
+                }
+
                 var counter = 0;
                 foreach (var pb in dbRecord.PeriodicBackups)
                 {
@@ -61,7 +65,7 @@ namespace TaskCleaner
                 tasksCount += counter;
             }
 
-            if(success)
+            if (success)
                 ReportSuccess($"Successfully removed all {tasksCount} {nameof(OngoingTaskType.Backup)} tasks, from all databases.");
             else
                 ReportFailure($"Failed to removed all {nameof(OngoingTaskType.Backup)} tasks", null);
