@@ -2,7 +2,7 @@
   "profiles": {
     "Notifier": {
       "commandName": "Project",
-      "commandLineArgs": "http://10.0.0.92:9501"
+      "commandLineArgs": "--orchestratorUrl=http://orchestrator:8090 --ravendbUrl=http://orchestrator:9100"
     }
   }
 }

@@ -32,8 +32,6 @@ namespace BackupAndRestore
 
         private const int _numberOfCompareExchange = 2_500;
 
-        private readonly TimeSpan _runTime = TimeSpan.FromMinutes(9);
-
         private readonly List<MyBackup> MyBackupsList = new List<MyBackup>();
         private readonly List<string> MyRestoreDbsList = new List<string>();
 
@@ -53,7 +51,7 @@ namespace BackupAndRestore
         {
             var tasks = new List<Task>();
             var cts = new CancellationTokenSource();
-            var s = new Stopwatch();
+
 
             using (var session = DocumentStore.OpenSession())
             {
@@ -82,7 +80,7 @@ namespace BackupAndRestore
                 ReportInfo("Skipping Creation of Compare Exchange");
             }
 
-            s.Start();
+
 
             // do stuff in the background
             ReportInfo("Starting background tasks");
@@ -91,19 +89,20 @@ namespace BackupAndRestore
             tasks.Add(RunTask(ModifyMovies, cts));
             tasks.Add(RunTask(ModifyCompareExchange, cts));
             ReportInfo("Background tasks started");
-            while (s.Elapsed < _runTime)
+            for (int jj = 0; jj < 10; jj++)
+            // while (s.Elapsed < _runTime)
             {
-                if (MyRestoreDbsList.Count == 30)
-                {
-                    ReportInfo($"Restored {MyRestoreDbsList.Count} backups, breaking while...");
-                    break;
-                }
+                //if (MyRestoreDbsList.Count == 2)
+                //{
+                //    ReportInfo($"Restored {MyRestoreDbsList.Count} backups, breaking while...");
+                //    break;
+                //}
 
                 var rnd = new Random();
                 var num = rnd.Next(0, 100);
 
 
-                if (0 <= num && num < 4) // 4%
+                if (0 <= num && num < 25) // 25%
                 {
                     ReportInfo("Started to create a backup task");
                     var myGuid = Guid.NewGuid();
@@ -120,7 +119,7 @@ namespace BackupAndRestore
 
                     ReportInfo($"Finished to create a backup task with id: {taskID}");
                 }
-                else if (4 <= num && num < 9) // 5%
+                else if (25 <= num && num < 50) // 25%
                 {
                     if (MyBackupsList.Count > 0)
                     {
@@ -137,7 +136,7 @@ namespace BackupAndRestore
                         }
                     }
                 }
-                else if (9 <= num && num < 14) // 5%
+                else if (50 <= num && num < 75) // 25%
                 {
                     if (MyBackupsList.Count > 0)
                     {
@@ -154,7 +153,7 @@ namespace BackupAndRestore
                         }
                     }
                 }
-                else if (14 <= num && num < 29)
+                else if (75 <= num && num < 82) // 7%
                 {
                     var waitTime = rnd.Next(50, 1000);
                     await Task.Delay(waitTime, cts.Token).ConfigureAwait(false);
@@ -162,42 +161,34 @@ namespace BackupAndRestore
                     await ModifyActors().ConfigureAwait(false);
 
                 }
-                else if (29 <= num && num < 44)
+                else if (82 <= num && num < 89) // 7%
                 {
                     var waitTime = rnd.Next(50, 1000);
                     await Task.Delay(waitTime, cts.Token).ConfigureAwait(false);
                     //ReportInfo($"Waited for {waitTime} ms, Starting modify Directors");
                     await ModifyDirectors().ConfigureAwait(false);
                 }
-                else if (44 <= num && num < 59)
+                else if (89 <= num && num < 95) // 6%
                 {
                     var waitTime = rnd.Next(50, 1000);
                     await Task.Delay(waitTime, cts.Token).ConfigureAwait(false);
-                   // ReportInfo($"Waited for {waitTime} ms, Starting modify Movies");
+                    // ReportInfo($"Waited for {waitTime} ms, Starting modify Movies");
                     await ModifyMovies().ConfigureAwait(false);
                 }
-                else if (59 <= num && num < 74)
+                else if (95 <= num) // 5%
                 {
                     var waitTime = rnd.Next(50, 1000);
                     await Task.Delay(waitTime, cts.Token).ConfigureAwait(false);
-                  //  ReportInfo($"Waited for {waitTime} ms, Starting modify CompareExchange");
+                    //  ReportInfo($"Waited for {waitTime} ms, Starting modify CompareExchange");
                     await ModifyCompareExchange().ConfigureAwait(false);
                 }
-            }
-
-            if (s.Elapsed >= _runTime)
-                ReportInfo("Elapsed time is bigger then run time, finishing...");
-
-            s.Stop();
+            }          
 
             cts.Cancel();
             await Task.WhenAll(tasks).ConfigureAwait(false);
 
             var success = CheckBackupStatuses();
-            var clearSuccess = ClearRestoredDatabases();
-
-
-            ReportInfo($"Ran for {s.Elapsed.Minutes} of {_runTime.Minutes} mins");
+            var clearSuccess = ClearRestoredDatabases();            
 
             if (success && clearSuccess)
                 ReportSuccess("BackupAndRestore Test Finished.");
@@ -362,7 +353,7 @@ namespace BackupAndRestore
             {
                 if (int.TryParse(list.Result[key].Value, out var val) == false)
                     continue;
-                
+
                 val += 1;
 
                 await DocumentStore.Operations.SendAsync(
@@ -527,7 +518,7 @@ namespace BackupAndRestore
 
                 var rnd = new Random();
                 int i = actorsCount;
-                while(i < _numberOfActors)
+                while (i < _numberOfActors)
                 {
                     await bulkInsert.StoreAsync(new Actor
                     {

@@ -2,7 +2,7 @@
   "profiles": {
     "TestsRunner": {
       "commandName": "Project",
-      "commandLineArgs": "-o=http://10.0.0.69:9100 --round=0"
+      "commandLineArgs": "-o=http://orchestrator:9100 --round=0"
     }
   }
 }

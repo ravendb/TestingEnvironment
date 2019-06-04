@@ -244,8 +244,8 @@ namespace TestingEnvironment.Orchestrator
         //mostly needed to detect if some client is stuck/hang out    
         public void UnregisterTest(string testName)
         {
+            TestInfo latestTestInfo = null;
             var sp = Stopwatch.StartNew();
-            var retry = false;
             do
             {
                 try
@@ -253,7 +253,7 @@ namespace TestingEnvironment.Orchestrator
                     using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
                     {
                         session.Advanced.UseOptimisticConcurrency = true;
-                        var latestTestInfo = session.Query<TestInfo>().FirstOrDefault(x => x.Name == testName);
+                        latestTestInfo = session.Query<TestInfo>().FirstOrDefault(x => x.Name == testName);
                         if (latestTestInfo != null)
                         {
                             latestTestInfo.Finished = true;
@@ -262,15 +262,16 @@ namespace TestingEnvironment.Orchestrator
                             session.SaveChanges();
                         }
                     }
-                    retry = false;
+                    break;
                 }
-                catch (Raven.Client.Exceptions.ConcurrencyException)
+                catch (Exception e)
                 {
-                    retry = true;
+                    Console.Write($"-*{latestTestInfo?.Id} / {e.Message}*-");
                     if (sp.Elapsed.TotalSeconds > 30)
                         throw;
-                }
-            } while (retry);
+                }                
+                Thread.Sleep(3000);
+            } while (true);
         }
 
         public TestInfo GetLastTestByName(string testName)

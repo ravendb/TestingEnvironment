@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Scenarios\AuthorizationBundle\AuthorizationBundle.csproj" />
     <ProjectReference Include="..\..\Scenarios\BackupAndRestore\BackupAndRestore.csproj" />
+    <ProjectReference Include="..\..\Scenarios\BackupTaskCleaner\BackupTaskCleaner.csproj" />
     <ProjectReference Include="..\..\Scenarios\BlogComment\BlogComment.csproj" />
     <ProjectReference Include="..\..\Scenarios\CorruptedCasino\CorruptedCasino.csproj" />
     <ProjectReference Include="..\..\Scenarios\Counters\Counters.csproj" />

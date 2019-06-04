@@ -9,18 +9,27 @@ using System.Text;
 using System.Threading;
 using TestingEnvironment.Common.OrchestratorReporting;
 using TestingEnvironment.Client;
+using Notifier.Notifier;
 
 namespace Notifier
 {
     public class Program
     {
+        public class MyArgs
+        {
+            public string ravendbUrl { get; set; }
+            public string orchestratorUrl { get; set; }
+            public string forceUpdate { get; set; }
+        }
         public static void Main(string[] args)
         {
-            var ravendbUrl = args[0];
-            var orchestratorUrl = args[1];
-
+            var helpText = @"
+Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
+";
+            var rcArgs = new HandleArgs<MyArgs>().ProcessArgs(args, helpText);
+            bool forceUpdate = rcArgs.forceUpdate.ToLower().Equals("force");
             int lastDaySent = DateTime.Now.Day;            
-            Console.WriteLine($"Notifier of Embedded Server : {ravendbUrl}");
+            Console.WriteLine($"Notifier of Embedded Server : {rcArgs.ravendbUrl}");
 
             while (true)
             {
@@ -29,7 +38,7 @@ namespace Notifier
                     Console.WriteLine();
                     using (var store = new DocumentStore
                     {
-                        Urls = new[] { ravendbUrl },
+                        Urls = new[] { rcArgs.ravendbUrl },
                         Database = "Orchestrator"
                     }.Initialize())
                     {
@@ -157,10 +166,10 @@ namespace Notifier
                                                         ""color"": """ + color + @""",
                                                         ""pretext"": ""Testing Environment Results"",
                                                         ""author_name"": ""Round " + round + @" (Click to view)"",
-                                                        ""author_link"": """ + orchestratorUrl + @"/round-results?round=" + round + @""",
+                                                        ""author_link"": """ + rcArgs.orchestratorUrl + @"/round-results?round=" + round + @""",
                                                         ""author_icon"": ""https://ravendb.net/img/team/adi_avivi.jpg"",
                                                         ""title"": ""Total Tests: " + total + @" | Total Failures: " + totalFailuresCount + @" | Still Running: " + totalNotCompletedCount + @""",                                                        
-                                                        ""text"": ""<" + ravendbUrl + @"/studio/index.html#databases/query/index/FailTestsComplete?&database=Orchestrator|RavenDB Studio> - See all rounds errors\n"",
+                                                        ""text"": ""<" + rcArgs.ravendbUrl + @"/studio/index.html#databases/query/index/FailTestsComplete?&database=Orchestrator|RavenDB Studio> - See all rounds errors\n"",
                                                         ""fields"": [
                                                                     " + /*notFinishedText.ToString()*/ "" + @"
                                                             " + failureText.ToString() + @"                        
@@ -175,8 +184,8 @@ namespace Notifier
 
 
                             var now = DateTime.Now;
-                            if (now.Hour >= 9 &&
-                                now.Day != lastDaySent)
+                            if (forceUpdate || (now.Hour >= 9 &&
+                                now.Day != lastDaySent))
                             {
                                 Console.WriteLine();
                                 Console.WriteLine("Sending:");
