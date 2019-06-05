@@ -471,7 +471,8 @@ namespace BackupAndRestore
                     succeeded = false;
                 }
 
-                MyRestoreDbsList.Add(restoreDbName);
+                if (succeeded)
+                    MyRestoreDbsList.Add(restoreDbName);
 
                 for (var i = 0; i < MyBackupsList.Count; i++)
                 {
@@ -495,17 +496,22 @@ namespace BackupAndRestore
             ReportInfo("Clearing Restored Databases, Please clear the backup .ravendbdump files manually!");
             try
             {
-                DocumentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(new DeleteDatabasesOperation.Parameters
-                {
-                    DatabaseNames = MyRestoreDbsList.ToArray(),
-                    HardDelete = true,
-                    TimeToWaitForConfirmation = TimeSpan.FromSeconds(300)
-                }));
+                DocumentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(
+                    new DeleteDatabasesOperation.Parameters
+                    {
+                        DatabaseNames = MyRestoreDbsList.ToArray(),
+                        HardDelete = true,
+                        TimeToWaitForConfirmation = TimeSpan.FromSeconds(300)
+                    }));
             }
             catch (Exception e)
             {
-                ReportInfo($"Failed to clear the DBs! {e}");
+                ReportFailure($"Failed to clear the DBs!", e);
                 return false;
+            }
+            finally
+            {
+                MyRestoreDbsList.Clear();
             }
             return true;
         }

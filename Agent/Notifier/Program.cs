@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
 using Raven.Client.Documents;
 using System;
 using System.Collections.Generic;
@@ -9,7 +8,6 @@ using System.Text;
 using System.Threading;
 using TestingEnvironment.Common.OrchestratorReporting;
 using TestingEnvironment.Client;
-using Notifier.Notifier;
 
 namespace Notifier
 {
@@ -17,9 +15,9 @@ namespace Notifier
     {
         public class MyArgs
         {
-            public string ravendbUrl { get; set; }
-            public string orchestratorUrl { get; set; }
-            public string forceUpdate { get; set; }
+            public string RavendbUrl { get; set; }
+            public string OrchestratorUrl { get; set; }
+            public string ForceUpdate { get; set; }
         }
         public static void Main(string[] args)
         {
@@ -27,9 +25,21 @@ namespace Notifier
 Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
 ";
             var rcArgs = new HandleArgs<MyArgs>().ProcessArgs(args, helpText);
-            bool forceUpdate = rcArgs.forceUpdate.ToLower().Equals("force");
+            bool forceUpdate = rcArgs.ForceUpdate != null && rcArgs.ForceUpdate.ToLower().Equals("force");
+            if (rcArgs.RavendbUrl == null)
+            {
+                Console.WriteLine("Must specify --ravendbUrl");
+                Console.WriteLine(helpText);
+                Environment.Exit(1);
+            }
+            if (rcArgs.OrchestratorUrl == null)
+            {
+                Console.WriteLine("Must specify --orchestratorUrl");
+                Console.WriteLine(helpText);
+                Environment.Exit(1);
+            }
             int lastDaySent = DateTime.Now.Day;            
-            Console.WriteLine($"Notifier of Embedded Server : {rcArgs.ravendbUrl}");
+            Console.WriteLine($"Notifier of Embedded Server : {rcArgs.RavendbUrl}");
 
             while (true)
             {
@@ -38,7 +48,7 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                     Console.WriteLine();
                     using (var store = new DocumentStore
                     {
-                        Urls = new[] { rcArgs.ravendbUrl },
+                        Urls = new[] { rcArgs.RavendbUrl },
                         Database = "Orchestrator"
                     }.Initialize())
                     {
@@ -47,7 +57,8 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                         {
                             var roundResult = session.LoadAsync<StaticInfo>("staticInfo/1").Result;
                             var round = roundResult.Round;
-                            var results = session.Query<TestInfo, TestingEnvironment.Orchestrator.FailTestsComplete>().Where(x => x.Round == round, true).ToListAsync().Result;
+                            var copyRound = round;
+                            var results = session.Query<TestInfo, TestingEnvironment.Orchestrator.FailTestsComplete>().Where(x => x.Round == copyRound, true).ToListAsync().Result;
                             Console.WriteLine("Total=" + results.Count);
                             Console.WriteLine("Round=" + round);
                             var fails = new Dictionary<string, int>();
@@ -57,7 +68,7 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
 
                             foreach (var item in results)
                             {
-                                if (item.Finished == true)
+                                if (item.Finished)
                                 {
                                     if (fails.ContainsKey(item.Name))
                                         fails[item.Name] = fails[item.Name] + 1;
@@ -139,7 +150,8 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                             ");
                             }
 
-                            var total = session.Query<TestInfo>().Where(x => x.Author != "TestRunner", true).CountAsync().Result;
+                            var copyRound2 = round;
+                            var total = session.Query<TestInfo>().Where(x => x.Author != "TestRunner" && x.Round == copyRound2, true).CountAsync().Result;
                             Console.WriteLine($"Out of total={total}");
 
                             var color = "good"; // green
@@ -166,13 +178,13 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                                                         ""color"": """ + color + @""",
                                                         ""pretext"": ""Testing Environment Results"",
                                                         ""author_name"": ""Round " + round + @" (Click to view)"",
-                                                        ""author_link"": """ + rcArgs.orchestratorUrl + @"/round-results?round=" + round + @""",
+                                                        ""author_link"": """ + rcArgs.OrchestratorUrl + @"/round-results?round=" + round + @""",
                                                         ""author_icon"": ""https://ravendb.net/img/team/adi_avivi.jpg"",
                                                         ""title"": ""Total Tests: " + total + @" | Total Failures: " + totalFailuresCount + @" | Still Running: " + totalNotCompletedCount + @""",                                                        
-                                                        ""text"": ""<" + rcArgs.ravendbUrl + @"/studio/index.html#databases/query/index/FailTestsComplete?&database=Orchestrator|RavenDB Studio> - See all rounds errors\n"",
+                                                        ""text"": ""<" + rcArgs.RavendbUrl + @"/studio/index.html#databases/query/index/FailTestsComplete?&database=Orchestrator|RavenDB Studio> - See all rounds errors\n"",
                                                         ""fields"": [
                                                                     " + /*notFinishedText.ToString()*/ "" + @"
-                                                            " + failureText.ToString() + @"                        
+                                                            " + failureText + @"                        
                                                         ],                        
                                                         ""thumb_url"": ""https://ravendb.net/img/home/raven.png"",
                                                         ""footer"": ""The results were generated at " + DateTime.Now + @""",
@@ -205,7 +217,6 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                                     Console.WriteLine();
                                     Console.WriteLine(responseText);
                                     Console.WriteLine("Done");
-                                    round++;
                                 }
                             }
                         }
@@ -218,6 +229,7 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                 }
                 Thread.Sleep(TimeSpan.FromHours(1));
             }
+            // ReSharper disable once FunctionNeverReturns
         }
     }
 }

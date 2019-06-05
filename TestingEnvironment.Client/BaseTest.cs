@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Raven.Client.Documents;
 using ServiceStack;
 using TestingEnvironment.Common;
-using System.Net;
 
 namespace TestingEnvironment.Client
 {
@@ -60,33 +60,39 @@ namespace TestingEnvironment.Client
 
         protected void ReportInfo(string message, Dictionary<string, string> additionalInfo = null)
         {
-            ReportEvent(new EventInfo
+            var response = ReportEvent(new EventInfo
             {
                 Message = message,
                 AdditionalInfo = additionalInfo,
                 Type = EventInfo.EventType.Info
             });
+            if (response.Type != EventResponse.ResponseType.Ok)
+                Console.WriteLine($"ERROR: ReportEvent Response == {response.Type} for : '{message}'");
         }
 
         protected void ReportSuccess(string message, Dictionary<string, string> additionalInfo = null)
         {
-            ReportEvent(new EventInfo
+            var response = ReportEvent(new EventInfo
             {
                 Message = message,
                 AdditionalInfo = additionalInfo,
                 Type = EventInfo.EventType.TestSuccess
             });
+            if (response.Type != EventResponse.ResponseType.Ok)
+                Console.WriteLine($"ERROR: ReportEvent Response == {response.Type} for : '{message}'");
         }
 
         protected void ReportFailure(string message, Exception error, Dictionary<string, string> additionalInfo = null)
         {
-            ReportEvent(new EventInfo
+            var response = ReportEvent(new EventInfo
             {
                 Message = message,
                 AdditionalInfo = additionalInfo,
                 Exception = error,
                 Type = EventInfo.EventType.TestFailure
             });
+            if (response.Type != EventResponse.ResponseType.Ok)
+                Console.WriteLine($"ERROR: ReportEvent Response == {response.Type} for : '{message}'");
         }
 
         private EventResponse ReportEvent(EventInfo eventInfo)
@@ -97,9 +103,9 @@ namespace TestingEnvironment.Client
                 Exception = eventInfo.Exception?.ToString(),
                 Message = eventInfo.Message,
                 Type = (EventInfoWithExceptionAsString.EventType)eventInfo.Type,
-                EventTime = DateTime.Now.ToString()
+                EventTime = DateTime.Now.ToString(CultureInfo.InvariantCulture)
             };
-            return _orchestratorClient.Post<EventResponse>($"/report?testName={TestName}", eventInfoWithExceptionAsString);
+            return _orchestratorClient.Post<EventResponse>($"/report?testName={TestName}&round={_round}", eventInfoWithExceptionAsString);
         }
 
         protected int SetRound(int round)
@@ -117,7 +123,7 @@ namespace TestingEnvironment.Client
 
         protected bool SetStrategy(string strategy)
         {
-            ReportEvent(new EventInfo { Message = $"Setting strategy to {strategy}" });
+            var _ = ReportEvent(new EventInfo { Message = $"Setting strategy to {strategy}" });
             var rc = _orchestratorClient.Put<bool>($"/config-selectors?strategyName={Uri.EscapeDataString(strategy)}", "");
             if (rc)
                 ReportInfo($"Successfully set strategy to {strategy}");
@@ -129,7 +135,7 @@ namespace TestingEnvironment.Client
 
         public virtual void Dispose()
         {
-            _orchestratorClient.Put<object>($"/unregister?testName={TestName}",null);
+            _orchestratorClient.Put<object>($"/unregister?testName={TestName}&round={_round}",null);
 
             _orchestratorClient.Dispose();
             DocumentStore.Dispose();

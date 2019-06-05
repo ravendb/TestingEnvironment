@@ -25,7 +25,7 @@ namespace TestingEnvironment.Orchestrator
 
             Put("/unregister", @params =>
             {
-                Orchestrator.Instance.UnregisterTest(Uri.UnescapeDataString((string) Request.Query.testName));
+                Orchestrator.Instance.UnregisterTest(Uri.UnescapeDataString((string) Request.Query.testName), Uri.UnescapeDataString((string)Request.Query.round));
                 return Empty;
             });
 
@@ -34,12 +34,13 @@ namespace TestingEnvironment.Orchestrator
             Post("/report", @params =>
             {
                 return Orchestrator.Instance.ReportEvent(Uri.UnescapeDataString((string) Request.Query.testName),
+                    Uri.UnescapeDataString((string)Request.Query.round),
                         this.Bind<EventInfoWithExceptionAsString>());
             });
             
             //get latest test by name
             Get<dynamic>("/latest-tests", @params => 
-                Response.AsJson(Orchestrator.Instance.GetLastTestByName(Uri.UnescapeDataString((string) Request.Query.testName))));
+                Response.AsJson(Orchestrator.Instance.GetLastTestByName(Uri.UnescapeDataString((string) Request.Query.testName), Uri.UnescapeDataString((string)Request.Query.round))));
 
             //non success tests
             Get<dynamic>("/failing-tests", @params =>

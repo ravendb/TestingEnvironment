@@ -142,7 +142,7 @@ namespace TestingEnvironment.Orchestrator
                 int k = 0;
                 rc.FailTestInfoDetails = new TestInfo[results.Count];
                 foreach (var item in results)
-                {                    
+                {
                     if (item.Finished == true)
                     {
                         if (fails.ContainsKey(item.Name))
@@ -166,28 +166,24 @@ namespace TestingEnvironment.Orchestrator
                 rc.TotalTestsInRound = session.Query<TestInfo>().Where(x => x.Author != "TestRunner" && x.Round == rc.Round, true).CountAsync().Result;
                 rc.UniqueFailCount = fails.Count;
 
-                int i = 0;
+                var i = 0;
                 rc.UniqueTestsDetailsInfo = new UniqueTestsDetails[fails.Count];
                 foreach (var item in fails)
                 {
-                    rc.UniqueTestsDetailsInfo[i] = new UniqueTestsDetails();
-                    rc.UniqueTestsDetailsInfo[i].TestName = item.Key;
-                    rc.UniqueTestsDetailsInfo[i].FailCount = item.Value;
+                    rc.UniqueTestsDetailsInfo[i] = new UniqueTestsDetails
+                    {
+                        TestName = item.Key,
+                        FailCount = item.Value
+                    };
                     ++i;
                 }
 
-                foreach (var item in results)
-                {
-
-                    rc.RoundStatus = "good"; // green
-                    if (fails.Count > 0)
-                        rc.RoundStatus = "danger"; // red
-                    else if (rc.TotalTestsInRound == 0 ||
-                        notFinished.Count > 1)
-                        rc.RoundStatus = "warning"; // yellow                        
-
-
-                }
+                rc.RoundStatus = "good"; // green
+                if (fails.Count > 0)
+                    rc.RoundStatus = "danger"; // red
+                else if (rc.TotalTestsInRound == 0 ||
+                    notFinished.Count > 1)
+                    rc.RoundStatus = "warning"; // yellow                        
 
                 return rc;
             }
@@ -242,7 +238,7 @@ namespace TestingEnvironment.Orchestrator
         }
 
         //mostly needed to detect if some client is stuck/hang out    
-        public void UnregisterTest(string testName)
+        public void UnregisterTest(string testName, string roundStr)
         {
             TestInfo latestTestInfo = null;
             var sp = Stopwatch.StartNew();
@@ -250,10 +246,23 @@ namespace TestingEnvironment.Orchestrator
             {
                 try
                 {
+                    var round = int.Parse(roundStr);
                     using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
                     {
                         session.Advanced.UseOptimisticConcurrency = true;
-                        latestTestInfo = session.Query<TestInfo>().FirstOrDefault(x => x.Name == testName);
+                        var latestTestInfos = session.Query<TestInfo>().Where(x => x.Name == testName && x.Round == round).ToList();
+
+                        var biggest = 0;
+                        foreach (var item in latestTestInfos)
+                        {
+                            var num = int.Parse(item.Id.Split("/")[1].Split("-")[0]);
+                            if (num > biggest)
+                            {
+                                latestTestInfo = item;
+                                biggest = num;
+                            }
+                        }
+
                         if (latestTestInfo != null)
                         {
                             latestTestInfo.Finished = true;
@@ -269,17 +278,18 @@ namespace TestingEnvironment.Orchestrator
                     Console.Write($"-*{latestTestInfo?.Id} / {e.Message}*-");
                     if (sp.Elapsed.TotalSeconds > 30)
                         throw;
-                }                
+                }
                 Thread.Sleep(3000);
             } while (true);
         }
 
-        public TestInfo GetLastTestByName(string testName)
+        public TestInfo GetLastTestByName(string testName, string roundStr)
         {
+            var round = int.Parse(roundStr);
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
                 session.Advanced.UseOptimisticConcurrency = true;
-                return session.Query<TestInfo>().OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName);
+                return session.Query<TestInfo>().OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName && x.Round == round);
             }
         }
 
@@ -320,16 +330,16 @@ namespace TestingEnvironment.Orchestrator
             return round;
         }
 
-        public EventResponse ReportEvent(string testName, EventInfoWithExceptionAsString @event)
+        public EventResponse ReportEvent(string testName, string round, EventInfoWithExceptionAsString @event)
         {
+            var num = int.Parse(round);
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
                 session.Advanced.UseOptimisticConcurrency = true;
-                var latestTest = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName);
+                var latestTest = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName && x.Round == num);
                 if (latestTest != null)
                 {
                     latestTest.Events.Add(@event);
-                    var requests = session.Advanced.NumberOfRequests;
                     session.SaveChanges();
                 }
 
