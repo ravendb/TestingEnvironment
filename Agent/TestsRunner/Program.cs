@@ -47,7 +47,8 @@ namespace TestsRunner
                          Round number above 0 overrides current round number,        
                          setting to 0 will increase current round by one.             ";
 
-            var options = new HandleArgs<TestRunnerArgs>().ProcessArgs(args, helpText);
+            var defaults = new TestRunnerArgs {Round = "-1" };
+            var options = new HandleArgs<TestRunnerArgs>().ProcessArgs(args, helpText, defaults);
             TextWriter stdOut = options.StdOut == null ? Console.Out : File.CreateText(options.StdOut);
             if (options.OrchestratorUrl == null)
             {
@@ -75,7 +76,7 @@ namespace TestsRunner
 
                 stdOut.WriteLine("Setting Strategy: FirstClusterRandomDatabaseStrategy");
                 int roundResult;
-                using (var client = new StrategySet(options.OrchestratorUrl, "StrategySet", options.Round))
+                using (var client = new StrategySet(options.OrchestratorUrl, "StrategySet", int.Parse(options.Round)))
                 {
                     client.Initialize();
                     client.RunTest();
@@ -186,8 +187,8 @@ namespace TestsRunner
 
     public class TestRunnerArgs
     {
-        public string OrchestratorUrl;
-        public int Round = -1;
-        public string StdOut;
+        public string OrchestratorUrl { get; set; }
+        public string Round { get; set; }
+        public string StdOut  { get; set; }
     }
 }
