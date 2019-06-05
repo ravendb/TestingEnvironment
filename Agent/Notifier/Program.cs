@@ -57,7 +57,8 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                         {
                             var roundResult = session.LoadAsync<StaticInfo>("staticInfo/1").Result;
                             var round = roundResult.Round;
-                            var results = session.Query<TestInfo, TestingEnvironment.Orchestrator.FailTestsComplete>().Where(x => x.Round == round, true).ToListAsync().Result;
+                            var copyRound = round;
+                            var results = session.Query<TestInfo, TestingEnvironment.Orchestrator.FailTestsComplete>().Where(x => x.Round == copyRound, true).ToListAsync().Result;
                             Console.WriteLine("Total=" + results.Count);
                             Console.WriteLine("Round=" + round);
                             var fails = new Dictionary<string, int>();
@@ -67,7 +68,7 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
 
                             foreach (var item in results)
                             {
-                                if (item.Finished == true)
+                                if (item.Finished)
                                 {
                                     if (fails.ContainsKey(item.Name))
                                         fails[item.Name] = fails[item.Name] + 1;
@@ -149,7 +150,8 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                             ");
                             }
 
-                            var total = session.Query<TestInfo>().Where(x => x.Author != "TestRunner" && x.Round == round, true).CountAsync().Result;
+                            var copyRound2 = round;
+                            var total = session.Query<TestInfo>().Where(x => x.Author != "TestRunner" && x.Round == copyRound2, true).CountAsync().Result;
                             Console.WriteLine($"Out of total={total}");
 
                             var color = "good"; // green
@@ -182,7 +184,7 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                                                         ""text"": ""<" + rcArgs.RavendbUrl + @"/studio/index.html#databases/query/index/FailTestsComplete?&database=Orchestrator|RavenDB Studio> - See all rounds errors\n"",
                                                         ""fields"": [
                                                                     " + /*notFinishedText.ToString()*/ "" + @"
-                                                            " + failureText.ToString() + @"                        
+                                                            " + failureText + @"                        
                                                         ],                        
                                                         ""thumb_url"": ""https://ravendb.net/img/home/raven.png"",
                                                         ""footer"": ""The results were generated at " + DateTime.Now + @""",
@@ -215,7 +217,6 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                                     Console.WriteLine();
                                     Console.WriteLine(responseText);
                                     Console.WriteLine("Done");
-                                    round++;
                                 }
                             }
                         }
@@ -228,6 +229,7 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                 }
                 Thread.Sleep(TimeSpan.FromHours(1));
             }
+            // ReSharper disable once FunctionNeverReturns
         }
     }
 }
