@@ -24,7 +24,8 @@ namespace Notifier
             var helpText = @"
 Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
 ";
-            var rcArgs = new HandleArgs<MyArgs>().ProcessArgs(args, helpText);
+            var defaults = new MyArgs();
+            var rcArgs = new HandleArgs<MyArgs>().ProcessArgs(args, helpText, defaults);
             bool forceUpdate = rcArgs.ForceUpdate != null && rcArgs.ForceUpdate.ToLower().Equals("force");
             if (rcArgs.RavendbUrl == null)
             {

@@ -4,9 +4,10 @@ namespace TestingEnvironment.Client
 {
     public class HandleArgs<T>
     {
-        public T ProcessArgs(string[] args, string helpText)
+        public T ProcessArgs(string[] args, string helpText, T defaults)
         {
-            var instance = Activator.CreateInstance<T>();
+            // var instance = Activator.CreateInstance<T>();
+            var instance = defaults;
             var members = typeof(T).GetMembers();
             foreach (var arg in args)
             {
@@ -41,9 +42,10 @@ namespace TestingEnvironment.Client
                             var prop = typeof(T).GetProperty(member.Name);
                             prop.SetValue(instance, option[1]);
                         }
-                        catch (Exception)
+                        catch (Exception e) // make sure class T contains properties (getter and setter must be specified)
                         {
                             Console.WriteLine($"Invalid value passed to argument {option[0]}");
+                            Console.WriteLine($"Exception:{e.Message}");
                             Environment.Exit(1);
                         }
                         break;
