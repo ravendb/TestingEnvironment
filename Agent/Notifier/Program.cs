@@ -195,8 +195,9 @@ Usage: Notifier --ravendbUrl=<url> --orchestratorUrl=<url> [--forceUpdate=force]
                                             }
                                             ";
 
-
+                            
                             var now = DateTime.Now;
+                            Console.WriteLine($"now={now}, now.Hour={now.Hour}, now.Day={now.Day}, lastDaySent={lastDaySent}");
                             if (forceUpdate || (now.Hour >= 9 &&
                                 now.Day != lastDaySent))
                             {
