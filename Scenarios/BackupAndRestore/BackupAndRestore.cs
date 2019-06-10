@@ -437,7 +437,7 @@ namespace BackupAndRestore
                     var re = DocumentStore.GetRequestExecutor(DocumentStore.Database);
                     var restoreBackupTaskCommand =
                         restoreBackupTask.GetCommand(DocumentStore.Conventions, session.Advanced.Context);
-                    await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
+                    await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag.Equals(backup.BackupStatus.NodeTag)),
                             null, session.Advanced.Context, restoreBackupTaskCommand, shouldRetry: false)
                         .ConfigureAwait(false);
 
@@ -446,14 +446,14 @@ namespace BackupAndRestore
                     var getOperationStateTaskCommand =
                         getOperationStateTask.GetCommand(DocumentStore.Conventions, session.Advanced.Context);
 
-                    await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
+                    await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag.Equals(backup.BackupStatus.NodeTag)),
                             null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false)
                         .ConfigureAwait(false);
 
                     while (getOperationStateTaskCommand.Result == null || getOperationStateTaskCommand.Result.Status == OperationStatus.InProgress)
                     {
                         await Task.Delay(2000).ConfigureAwait(false);
-                        await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag == backup.BackupStatus.NodeTag),
+                        await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag.Equals(backup.BackupStatus.NodeTag)),
                                 null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false)
                             .ConfigureAwait(false);
                     }
