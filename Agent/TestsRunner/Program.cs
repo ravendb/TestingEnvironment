@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using Raven.Client.Documents;
 using TestingEnvironment.Client;
+using TestingEnvironment.Common.OrchestratorReporting;
 
 namespace TestsRunner
 {
@@ -37,7 +39,10 @@ namespace TestsRunner
                  OPTIONS:                                                            
                      --orchestratorUrl=<url>                                         
                          Orchestrator listening url (as defined in orchestrator      
-                         appsettings.json/OrchestratorUrl).                          
+                         appsettings.json/OrchestratorUrl).    
+
+                    --ravendbUrl=<url>
+                         Embedded RavenDB url in orchestrator
                                                                                      
                      --output-to-file=<filepath>                                     
                          Redirect output to a file. If option not specified, StdOut  
@@ -50,9 +55,9 @@ namespace TestsRunner
             var defaults = new TestRunnerArgs {Round = "-1" };
             var options = new HandleArgs<TestRunnerArgs>().ProcessArgs(args, helpText, defaults);
             TextWriter stdOut = options.StdOut == null ? Console.Out : File.CreateText(options.StdOut);
-            if (options.OrchestratorUrl == null)
+            if (options.OrchestratorUrl == null || options.RavendbUrl == null)
             {
-                Console.WriteLine("--orchestratorUrl must be specified");
+                Console.WriteLine("--orchestratorUrl and --ravendbUrl must be specified");
                 Console.WriteLine();
                 Console.WriteLine(helpText);
                 Environment.Exit(1);
@@ -97,8 +102,8 @@ namespace TestsRunner
                     typeof(Counters.PutCountersOnCommentsBasedOnTopic),
                     typeof(Counters.PutCountersOnCommentsRandomly),
                     typeof(Counters.QueryBlogCommentsByTag),
-                    typeof(AuthorizationBundle.HospitalTest),
-                    typeof(CorruptedCasino.Casino),
+                    // typeof(AuthorizationBundle.HospitalTest),
+                    // typeof(CorruptedCasino.Casino),
                     typeof(Counters.PatchCommentRatingsBasedOnCounters),
                     typeof(Counters.QueryBlogCommentsAndIncludeCounters),
                     typeof(BackupTaskCleaner.BackupTaskCleaner),
@@ -107,7 +112,7 @@ namespace TestsRunner
                     typeof(Counters.SubscribeToCounterChanges),
                     typeof(Counters.IndexQueryOnCounterNames),
                     typeof(Counters.CounterRevisions),
-                    typeof(MarineResearch.MarineResearchTest),
+                    // typeof(MarineResearch.MarineResearchTest),
                     // typeof(Subscriptions.FilterAndProjection),
                     typeof(BackupAndRestore.BackupAndRestore)
                 };
@@ -136,6 +141,7 @@ namespace TestsRunner
 
                 stdOut.WriteLine();
                 stdOut.WriteLine("Runing Tests:");
+                int num = 1;
                 while (true)
                 {
                     foreach (var test in testsList)
@@ -144,14 +150,34 @@ namespace TestsRunner
                         try
                         {
                             var sp = Stopwatch.StartNew();
-                            stdOut.Write($"{DateTime.Now} {test.TestName}:{Environment.NewLine}Initialize...");
+                            stdOut.Write($"{num++}: {DateTime.Now} {test.TestName}: Initialize...");
                             test.Initialize();
                             stdOut.Write($" RunTest...");
                             test.RunTest();
                             stdOut.Write($" Dispose...");
                             testDisposed = true;
                             test.Dispose();
-                            stdOut.WriteLine($" Done @ {sp.Elapsed}");
+                            stdOut.Write($" Done @ {sp.Elapsed}");
+                            using (var store = new DocumentStore
+                            {
+                                Urls = new[] {options.RavendbUrl},
+                                Database = "Orchestrator"
+                            }.Initialize())
+                            {                                
+                                using (var session = store.OpenAsyncSession())
+                                {
+                                    stdOut.Write(" Reading index results...");
+                                    var roundResults = session.LoadAsync<StaticInfo>("staticInfo/1").Result;
+                                    var round = roundResults.Round;
+                                    var copyRound = round;
+                                    var results = session
+                                        .Query<TestInfo, TestingEnvironment.Orchestrator.FailTestsComplete>()
+                                        .Where(x => x.Round == copyRound, true)
+                                        .Customize(y => y.WaitForNonStaleResults(TimeSpan.FromSeconds(15)))
+                                        .ToListAsync().Result;
+                                    Console.WriteLine($" Total={results.Count} / Round={round}");
+                                }
+                            }
                         }
                         catch (Exception e)
                         {
@@ -188,6 +214,7 @@ namespace TestsRunner
     public class TestRunnerArgs
     {
         public string OrchestratorUrl { get; set; }
+        public string RavendbUrl { get; set; }
         public string Round { get; set; }
         public string StdOut  { get; set; }
     }

@@ -2,7 +2,7 @@
   "profiles": {
     "TestsRunner": {
       "commandName": "Project",
-      "commandLineArgs": "--orchestratorUrl=http://orchestrator:9100 --round=99"
+      "commandLineArgs": "--orchestratorUrl=http://orchestrator:9100 --ravendbUrl=http://orchestrator:8090 --round=99"
     }
   }
 }
