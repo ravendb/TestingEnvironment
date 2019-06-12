@@ -430,6 +430,7 @@ namespace BackupAndRestore
 
             using (var session = DocumentStore.OpenAsyncSession())
             {
+                var reasonableTimeForBackup = Stopwatch.StartNew();
                 var succeeded = true;
                 try
                 {
@@ -456,6 +457,13 @@ namespace BackupAndRestore
                         await re.ExecuteAsync(re.TopologyNodes.First(q => q.ClusterTag.Equals(backup.BackupStatus.NodeTag)),
                                 null, session.Advanced.Context, getOperationStateTaskCommand, shouldRetry: false)
                             .ConfigureAwait(false);
+                        if (reasonableTimeForBackup.Elapsed > TimeSpan.FromMinutes(5))
+                        {
+                            ReportFailure($"Restoring DB: {restoreDbName} Failed, taskID {backup.BackupTaskId} - Waited {reasonableTimeForBackup.Elapsed} and task didn't finished", null);
+                            succeeded = true; // marking as success in order to delete
+                            // TODO : RavenDB-13684
+                            break;
+                        }
                     }
                 }
                 catch (RavenException re)

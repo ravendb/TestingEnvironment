@@ -22,4 +22,4 @@ packages
 securestring*.txt
 TEOutWindows/
 TEOutLinux/
-appsettings.json
+Agent/Notifier/appsettings.json
