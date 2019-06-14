@@ -17,7 +17,6 @@
     <ProjectReference Include="..\..\Scenarios\Subscriptions\Subscriptions.csproj" />
     <ProjectReference Include="..\..\TestingEnvironment.Client\TestingEnvironment.Client.csproj" />
     <ProjectReference Include="..\..\TestingEnvironment.Common\TestingEnvironment.Common.csproj" />
-    <ProjectReference Include="..\..\TestingEnvironment.Orchestrator\TestingEnvironment.Orchestrator.csproj" />
   </ItemGroup>
 
 </Project>

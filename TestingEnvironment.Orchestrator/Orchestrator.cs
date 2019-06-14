@@ -82,7 +82,6 @@ namespace TestingEnvironment.Orchestrator
             _reportingDocumentStore.Initialize();
             new LatestTestByName().Execute(_reportingDocumentStore);
             new FailTests().Execute(_reportingDocumentStore);
-            new FailTestsComplete().Execute(_reportingDocumentStore);
 
             Console.WriteLine("Done.");
 
@@ -135,7 +134,7 @@ namespace TestingEnvironment.Orchestrator
             using (var session = _reportingDocumentStore.OpenAsyncSession())
             {
 
-                var results = session.Query<TestInfo, FailTestsComplete>().Where(x => x.Round == rc.Round, true).ToListAsync().Result;
+                var results = session.Query<TestInfo, FailTests>().Where(x => x.Round == rc.Round, true).ToListAsync().Result;
                 var fails = new Dictionary<string, int>();
                 var notFinished = new Dictionary<string, int>();
 
@@ -189,13 +188,77 @@ namespace TestingEnvironment.Orchestrator
             }
         }
 
-        public bool TrySetConfigSelectorStrategy(string strategyName)
+        public static OrchestratorConfiguration GetOrchestratorConfigurationCopy(OrchestratorConfiguration config)
+        {
+            var orchestratorConfig = new OrchestratorConfiguration
+            {
+                OrchestratorUrl = config.OrchestratorUrl,
+                EmbeddedServerUrl = config.EmbeddedServerUrl,
+                Databases = new string[config.Databases.Length]
+            };
+
+            var i = 0;
+            foreach (var db in config.Databases)
+                orchestratorConfig.Databases[i++] = db;
+
+            i = 0;
+            orchestratorConfig.LocalRavenServers = new ServerInfo[config.LocalRavenServers?.Length ?? 0];
+            foreach (var local in config.LocalRavenServers ?? orchestratorConfig.LocalRavenServers)
+            {
+                orchestratorConfig.LocalRavenServers[i] = new ServerInfo
+                {
+                    Path = local.Path,
+                    Port = local.Port
+                };
+                orchestratorConfig.LocalRavenServers[i++].Url = local.Url;
+            }
+
+            i = 0;
+            orchestratorConfig.Clusters = new ClusterInfo[config.Clusters.Length];
+            foreach (var clusterInfo in config.Clusters)
+            {
+                orchestratorConfig.Clusters[i] = new ClusterInfo
+                {
+                    HasAuthentication = clusterInfo.HasAuthentication,
+                    Name = clusterInfo.Name,
+                    PemFilePath = clusterInfo.PemFilePath
+                };
+                var j = 0;
+                orchestratorConfig.Clusters[i].Urls = new string[clusterInfo.Urls.Length];
+                foreach (var url in clusterInfo.Urls)
+                    orchestratorConfig.Clusters[i].Urls[j++] = url;
+                i++;
+            }
+
+            orchestratorConfig.NotifierConfig = new SlackNotifier.NotifierConfig
+            {
+                Uri = config.NotifierConfig.Uri,
+                UserEmail = config.NotifierConfig.UserEmail,
+                UserName = config.NotifierConfig.UserName
+            };
+
+            return orchestratorConfig;
+        }
+        
+
+
+        public bool TrySetConfigSelectorStrategy(string strategyName, string dbIndexStr)
         {
             var strategy = _configSelectorStrategies.FirstOrDefault(x =>
                 x.Name.Equals(strategyName, StringComparison.InvariantCultureIgnoreCase));
 
             if (strategy == null)
                 return false;
+
+            if (dbIndexStr != null &&
+                dbIndexStr.Equals("") == false && 
+                int.TryParse(dbIndexStr, out var dbIndex))
+            {
+                // re-init strategy with single database
+                var newConfig = GetOrchestratorConfigurationCopy(_config);
+                newConfig.Databases = new[] {_config.Databases[dbIndex]};
+                strategy.Initialize(newConfig);
+            }
 
             _currentConfigSelectorStrategy = strategy;
             return true;

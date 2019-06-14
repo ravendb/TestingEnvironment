@@ -12,14 +12,17 @@ namespace TestsRunner
     public class StrategySet : BaseTest
     {
         public int Round;
-        public StrategySet(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "TestRunner", round)
+        public string DbIndex;
+
+        public StrategySet(string orchestratorUrl, string testName, int round, string dbIndex) : base(orchestratorUrl, testName, "TestRunner", round)
         {
             Round = round;
+            DbIndex = dbIndex;
         }
 
         public override void RunActualTest()
         {
-            var success = SetStrategy("FirstClusterRandomDatabaseSelector");
+            var success = SetStrategy("FirstClusterRandomDatabaseSelector", DbIndex);            
             Round = SetRound(Round);
             ReportInfo($"Round set to {Round}");
             if (success)
@@ -50,7 +53,10 @@ namespace TestsRunner
                      --round=<round number>                                          
                          Set or increase round number. If not set, no change done.   
                          Round number above 0 overrides current round number,        
-                         setting to 0 will increase current round by one.             ";
+                         setting to 0 will increase current round by one.     
+                    --dbIndex=<dbIndex>
+                         Optionally for FirstClusterStrategy, select specific database from config file
+";
 
             var defaults = new TestRunnerArgs {Round = "-1" };
             var options = new HandleArgs<TestRunnerArgs>().ProcessArgs(args, helpText, defaults);
@@ -76,12 +82,13 @@ namespace TestsRunner
                 stdOut.WriteLine();
                 stdOut.WriteLine($"OrcestratorUrl: {options.OrchestratorUrl}");
                 stdOut.WriteLine($"Round: {options.Round}");
+                stdOut.WriteLine($"DbIndex: {options.DbIndex}");
                 stdOut.WriteLine();
                 stdOut.Flush();
 
                 stdOut.WriteLine("Setting Strategy: FirstClusterRandomDatabaseStrategy");
                 int roundResult;
-                using (var client = new StrategySet(options.OrchestratorUrl, "StrategySet", int.Parse(options.Round)))
+                using (var client = new StrategySet(options.OrchestratorUrl, "StrategySet", int.Parse(options.Round), options.DbIndex))
                 {
                     client.Initialize();
                     client.RunTest();
@@ -102,8 +109,8 @@ namespace TestsRunner
                     typeof(Counters.PutCountersOnCommentsBasedOnTopic),
                     typeof(Counters.PutCountersOnCommentsRandomly),
                     typeof(Counters.QueryBlogCommentsByTag),
-                    // typeof(AuthorizationBundle.HospitalTest),
-                    // typeof(CorruptedCasino.Casino),
+                    typeof(AuthorizationBundle.HospitalTest),
+                    typeof(CorruptedCasino.Casino),
                     typeof(Counters.PatchCommentRatingsBasedOnCounters),
                     typeof(Counters.QueryBlogCommentsAndIncludeCounters),
                     typeof(BackupTaskCleaner.BackupTaskCleaner),
@@ -112,7 +119,7 @@ namespace TestsRunner
                     typeof(Counters.SubscribeToCounterChanges),
                     typeof(Counters.IndexQueryOnCounterNames),
                     typeof(Counters.CounterRevisions),
-                    // typeof(MarineResearch.MarineResearchTest),
+                    typeof(MarineResearch.MarineResearchTest),
                     // typeof(Subscriptions.FilterAndProjection),
                     typeof(BackupAndRestore.BackupAndRestore)
                 };
@@ -171,7 +178,7 @@ namespace TestsRunner
                                     var round = roundResults.Round;
                                     var copyRound = round;
                                     var results = session
-                                        .Query<TestInfo, TestingEnvironment.Orchestrator.FailTestsComplete>()
+                                        .Query<TestInfo, FailTests>()
                                         .Where(x => x.Round == copyRound, true)
                                         .Customize(y => y.WaitForNonStaleResults(TimeSpan.FromSeconds(15)))
                                         .ToListAsync().Result;
@@ -217,5 +224,6 @@ namespace TestsRunner
         public string RavendbUrl { get; set; }
         public string Round { get; set; }
         public string StdOut  { get; set; }
+        public string DbIndex { get; set; }
     }
 }

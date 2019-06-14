@@ -121,10 +121,11 @@ namespace TestingEnvironment.Client
             return currentRound;
         }
 
-        protected bool SetStrategy(string strategy)
+        protected bool SetStrategy(string strategy, string dbIndex)
         {
             var _ = ReportEvent(new EventInfo { Message = $"Setting strategy to {strategy}" });
-            var rc = _orchestratorClient.Put<bool>($"/config-selectors?strategyName={Uri.EscapeDataString(strategy)}", "");
+            var dbIndexStr = dbIndex == null ? "" : $"&dbIndex={Uri.EscapeDataString(dbIndex)}";
+            var rc = _orchestratorClient.Put<bool>($"/config-selectors?strategyName={Uri.EscapeDataString(strategy)}{dbIndexStr}", "");
             if (rc)
                 ReportInfo($"Successfully set strategy to {strategy}");
             else

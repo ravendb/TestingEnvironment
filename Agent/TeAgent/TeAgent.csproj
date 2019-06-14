@@ -11,6 +11,13 @@
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.2.0" PrivateAssets="All" />
     <PackageReference Include="Microsoft.Management.Infrastructure" Version="1.0.0" />
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="6.2.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Raven.Client">
+      <HintPath>C:\Users\adi\.nuget\packages\ravendb.client\4.2.0\lib\netcoreapp2.1\Raven.Client.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
