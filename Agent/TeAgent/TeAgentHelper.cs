@@ -37,7 +37,7 @@ namespace TeAgent
                 if (filterFile != null && filterFile.Equals(file.Name) == false)
                     continue;
                 string temppath = Path.Combine(destDirName, file.Name);
-                file.CopyTo(temppath, false);
+                file.CopyTo(temppath, true);
             }
 
             // If copying subdirectories, copy them and their contents to new location.
