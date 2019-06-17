@@ -1,4 +1,7 @@
-﻿namespace TestingEnvironment.Orchestrator
+﻿using TestingEnvironment.Orchestrator;
+using static TestingEnvironment.Orchestrator.SlackNotifier;
+
+namespace TestingEnvironment.Orchestrator
 {
     public class ServerInfo
     {
@@ -16,12 +19,13 @@
 
         protected bool Equals(ClusterInfo other)
         {
-            return string.Equals(Name, other.Name) && HasAuthentication == other.HasAuthentication && Equals(Urls, other.Urls);
+            return string.Equals(Name, other.Name) && HasAuthentication == other.HasAuthentication &&
+                   Equals(Urls, other.Urls);
         }
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
+            if (null == obj) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
             return Equals((ClusterInfo) obj);
@@ -47,7 +51,10 @@
         {
             return !Equals(left, right);
         }
+
     }
+
+    
 
     public class OrchestratorConfiguration
     {
@@ -56,5 +63,7 @@
         public string[] Databases { get; set; }
         public ServerInfo[] LocalRavenServers { get; set; }
         public ClusterInfo[] Clusters { get; set; }
+        public NotifierConfig NotifierConfig { get; set; }
     }
 }
+

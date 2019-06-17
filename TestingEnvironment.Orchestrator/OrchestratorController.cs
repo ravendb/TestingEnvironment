@@ -56,7 +56,7 @@ namespace TestingEnvironment.Orchestrator
             //PUT http://localhost:5000/config-selectors?strategyName=FirstClusterSelector
             Put("/config-selectors", @params =>
             {
-                return Orchestrator.Instance.TrySetConfigSelectorStrategy(Uri.UnescapeDataString((string)Request.Query.strategyName));
+                return Orchestrator.Instance.TrySetConfigSelectorStrategy(Uri.UnescapeDataString((string)Request.Query.strategyName), Uri.UnescapeDataString((string)Request.Query.dbIndex ?? ""));
             });
 
             Get<dynamic>("/get-round", _ =>
