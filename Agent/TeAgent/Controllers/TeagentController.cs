@@ -6,6 +6,8 @@ using System.Linq;
 using System.Management.Automation;
 using System.Net;
 using System.Text;
+using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using static TeAgent.TeAgentHelper;
@@ -27,54 +29,157 @@ namespace TeAgent.Controllers
         [HttpGet("download")]
         public ActionResult DownloadHandler(string url, string dest, string extract)
         {
-            var sp = Stopwatch.StartNew();
-            var webClient = new WebClient();
-            webClient.DownloadFile(url, dest);
-            System.IO.Compression.ZipFile.ExtractToDirectory(dest, extract);
-            return Content($"{url} downloaded to {dest} and extracted to {extract}. Took {sp.Elapsed}");
+            try
+            {
+                var sp = Stopwatch.StartNew();
+                var webClient = new WebClient();
+                webClient.DownloadFile(url, dest);
+                System.IO.Compression.ZipFile.ExtractToDirectory(dest, extract);
+                return Content($"{url} downloaded to {dest} and extracted to {extract}. Took {sp.Elapsed}");
+            }
+            catch (Exception e)
+            {
+                return Content("Exception thrown... : " + e, "text/plain");
+            }
         }
 
         // GET teagent/execute/delete-dir?dir=<dirpath>
         [HttpGet("delete-dir")]
         public ActionResult DeleteDirHandler(string dir)
         {
-            Directory.Delete(dir, true);
-            return Content($"{dir} Deleted");
+            try
+            {
+                Directory.Delete(dir, true);
+                return Content($"{dir} Deleted");
+            }
+            catch (Exception e)
+            {
+                return Content("Exception thrown... : " + e, "text/plain");
+            }
         }
 
-        // GET teagent/execute/upgrade-ravendb?source=<src path>&dest=<dest path>&newdb=<true|false - copy db and settings.json>
+        // GET teagent/execute/upgrade-ravendb?extract=<src path>&dest=<dest path>&newdb=<true|false - copy db and settings.json>&args=[ravendb args, optional]
         [HttpGet("upgrade-ravendb")]
-        public ActionResult DeleteDirHandler(string source, string dest, bool newdb)
+        public async Task<ActionResult> UpgradeRaven(string url, string extract, string dest, bool newdb, string args = null)
         {
             var sp = Stopwatch.StartNew();
-            var procs = Process.GetProcessesByName("Raven.Server");
-            if (procs.Length != 1)
+            try
             {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                return Content(
-                    $"There are {procs.Length} Raven.Server processes running. Must have a single one in order to upgrade");
-            }
-            procs[0].Kill();
-
-            if (newdb == false)
-            {
-                DirectoryCopy(Path.Combine(dest, "Server", "RavenData"), Path.Combine(source, "Server", "RavenData"),
-                    true);
-                DirectoryCopy(dest, source, false, "settings.json");
-            }
-
-            Directory.Delete(dest, true);
-            DirectoryCopy(source, dest, true);
-
-            var proc = new Process
-            {
-                StartInfo = new ProcessStartInfo(Path.Combine(dest, "Server", "Raven.Server"))
+                var webClient = new WebClient();
+                if (System.IO.File.Exists("latest.zip"))
+                    System.IO.File.Delete("latest.zip");
+                webClient.DownloadFile(url, "latest.zip");
+                try
                 {
-                    WorkingDirectory = Path.Combine(dest, "Server")
+                    Directory.Delete(extract);
                 }
-            };
+                catch
+                {
 
-            return Content($"RavenDB upgraded from {source} to {dest} with newdb={newdb}. Took {sp.Elapsed}, Proc={proc.Id}");
+                }
+                System.IO.Compression.ZipFile.ExtractToDirectory("latest.zip", extract, true);                
+            }
+            catch (Exception e)
+            {
+                return Content("Exception thrown... : " + e, "text/plain");
+            }
+
+            try
+            {
+                var procs = Process.GetProcessesByName("Raven.Server");
+                if (procs.Length > 1)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return Content(
+                        $"There are {procs.Length} Raven.Server processes running. Must have a single one in order to upgrade");
+                }
+
+                if (procs.Length != 0)
+                    procs[0].Kill();
+
+                Thread.Sleep(3000);
+
+                if (newdb == false)
+                {
+                    DirectoryCopy(Path.Combine(dest, "Server", "RavenData"),
+                        Path.Combine(extract, "Server", "RavenData"),
+                        true);
+                    DirectoryCopy(Path.Combine(dest, "Server"), Path.Combine(extract, "Server"), false, "settings.json");
+                }
+
+                try
+                {
+                    if (Directory.Exists(dest))
+                        Directory.Delete(dest, true);
+                    Directory.CreateDirectory(dest);
+                }
+                catch
+                {
+                    // ignore
+                }
+
+                try
+                {
+                    Directory.Move(extract, dest);
+                }
+                catch
+                {
+                    DirectoryCopy(extract, dest, true);
+                }
+
+                var proc = new Process
+                {
+                    StartInfo = new ProcessStartInfo(Path.Combine(dest, "Server", "Raven.Server"))
+                    {
+                        WorkingDirectory = Path.Combine(dest, "Server"),
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true
+                    }
+                };
+                if (args != null)
+                    proc.StartInfo.Arguments = args;
+
+                proc.Start();
+
+                StreamReader reader = proc.StandardOutput;
+                var sb = new StringBuilder();
+                var cts = new CancellationTokenSource();
+                //var t = new Task(() =>
+                //{
+                //    Stopwatch isp = Stopwatch.StartNew();
+                //    while (true)
+                //    {
+
+                //        if (isp.Elapsed > TimeSpan.FromSeconds(10))
+                //        {
+                //            cts.Cancel();
+                //            break;
+                //        }
+                //    }
+                //});
+
+                //t.Start();
+
+                while (true)
+                {
+                    var buffer = new char[4096];
+                    var byteCount = reader.ReadAsync(buffer, cts.Token).Result; // TODO: cancel doesn't work
+                    if (cts.IsCancellationRequested)
+                        break;
+
+                    sb.Append(buffer,0, byteCount);
+                    if (sb.ToString().Contains("Server started"))
+                        break;
+                }
+
+                return Content(
+                    $"RavenDB upgraded from {extract} to {dest} with newdb={newdb}. Took {sp.Elapsed}, Proc={proc.Id}, Cancel={cts.IsCancellationRequested}, Result={sb}");
+            }
+            catch (Exception e)
+            {
+                var info = $"({extract} to {dest} with newdb={newdb}) ";
+                return Content($"{info}Exception thrown... : {e}", "text/plain");
+            }
         }
 
 

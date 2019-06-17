@@ -10,7 +10,7 @@
   "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
     "IIS Express": {
-      "commandName": "IISExpress",
+      "commandName": "Executable",
       "launchBrowser": true,
       "launchUrl": "api/values",
       "environmentVariables": {
@@ -19,6 +19,7 @@
     },
     "TeAgent": {
       "commandName": "Project",
+      "commandLineArgs": "--skip-warning",
       "launchUrl": "api/values",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"

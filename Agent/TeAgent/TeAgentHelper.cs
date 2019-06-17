@@ -10,7 +10,7 @@ namespace TeAgent
     {
         public static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs, string filterFile = null)
         {
-            if (filterFile == null)
+            if (filterFile != null)
                 copySubDirs = false;
 
             // Get the subdirectories for the specified directory.
