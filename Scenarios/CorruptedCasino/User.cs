@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Polly;
 using Raven.Client;
 
 namespace CorruptedCasino
@@ -51,6 +52,9 @@ namespace CorruptedCasino
 
         public static async Task<User> RegisterOrLoad(string email, string name)
         {
+
+            var policy = Policy.Handle<TaskCanceledException>().WaitAndRetryAsync(3,_=> TimeSpan.FromSeconds(30));
+
             using (var session = Casino.GetClusterSessionAsync)
             {
                 var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(email).ConfigureAwait(false);
@@ -71,7 +75,7 @@ namespace CorruptedCasino
             {
                 await session.StoreAsync(user).ConfigureAwait(false);
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue(user.Email, user.Id);
-                await session.SaveChangesAsync().ConfigureAwait(false);
+                await policy.ExecuteAsync(async () => await session.SaveChangesAsync());
             }
 
             return user;
