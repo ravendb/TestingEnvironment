@@ -387,10 +387,16 @@ namespace BackupAndRestore
             await DocumentStore.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId)).ConfigureAwait(false);
             PeriodicBackupStatus backupStatus = DocumentStore.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
 
+            var retries = 0;
             while (backupStatus == null)
             {
                 await Task.Delay(2000).ConfigureAwait(false);
                 backupStatus = DocumentStore.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
+                if (++retries > 90) // 5 minutes
+                {
+                    ReportFailure("RunBackupTask: Failed to get backup {backupTaskId} status", null);
+                    return;
+                }
             }
 
             for (var i = 0; i < MyBackupsList.Count; i++)

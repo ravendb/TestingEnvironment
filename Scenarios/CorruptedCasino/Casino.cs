@@ -200,11 +200,13 @@ namespace CorruptedCasino
                     {
                         await Task.Delay(Lottery.Rand.Next(500, 1000)).ConfigureAwait(false);
                         var name = UserOperations.GetName();
-                        var user = await UserOperations.RegisterOrLoad($"{name}@karmel.com", name).ConfigureAwait(false);
+                        var user = await UserOperations.RegisterOrLoad($"{name}@karmel.com", name)
+                            .ConfigureAwait(false);
                         for (int j = 0; j < 10; j++)
                         {
                             await Task.Delay(Lottery.Rand.Next(500, 1000)).ConfigureAwait(false);
-                            await user.PlaceBet(lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10)).ConfigureAwait(false);
+                            await user.PlaceBet(lottery.Id, RandomSequence(), Lottery.Rand.Next(1, 10))
+                                .ConfigureAwait(false);
                         }
                     }
                     catch (ConcurrencyException)
@@ -215,7 +217,7 @@ namespace CorruptedCasino
                     {
                         // expected
                     }
-                    catch (JavaScriptException e) when(e.Message.Contains("Lottery is over!"))
+                    catch (JavaScriptException e) when (e.Message.Contains("Lottery is over!"))
                     {
                         // expected
                     }
