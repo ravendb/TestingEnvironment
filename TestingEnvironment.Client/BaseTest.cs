@@ -33,7 +33,7 @@ namespace TestingEnvironment.Client
         {
             var url = $"/register?testName={Uri.EscapeDataString(TestName)}&testClassName={Uri.EscapeDataString(GetType().FullName)}&author={Uri.EscapeDataString(_author)}&round={_round}";
             var config = _orchestratorClient.Put<TestConfig>(url,null);
-            var cert = config.PemFilePath == null || config.PemFilePath.Equals("") ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(config.PemFilePath); // TODO : remove "HasAuthentication"
+            var cert = config.PfxFilePath == null || config.PfxFilePath.Equals("") ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(config.PfxFilePath); // TODO : remove "HasAuthentication"
             DocumentStore = new DocumentStore
             {
                 Urls = config.Urls,

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -141,7 +142,19 @@ namespace MarineResearch
                                 Salinity: c.Salinity,
                             }}";
 
-            var client = new HttpClient();
+            HttpClient client;
+            if (DocumentStore.Certificate != null)
+            {
+                var clientHandler = new HttpClientHandler();
+                clientHandler.ClientCertificates.Add(DocumentStore.Certificate);
+                clientHandler.ClientCertificateOptions = ClientCertificateOption.Manual;
+                client = new HttpClient(clientHandler);
+            }
+            else
+            {
+                client = new HttpClient();
+            }
+
             var url =
                 $"{DocumentStore.Urls[0]}/databases/{DocumentStore.Database}/streams/queries?format=csv&query={Uri.EscapeDataString(query)}";
             Stream stream = null;

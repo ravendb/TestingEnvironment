@@ -128,6 +128,9 @@ namespace TestsRunner
                 var testsList = new List<BaseTest>();
                 foreach (var test in tests)
                 {
+                    if (test.Name.Equals("BackupAndRestore") &&
+                        (Environment.GetEnvironmentVariable("RAVEN_CLOUD_MACHINE") ?? "N").Contains("Y", StringComparison.InvariantCultureIgnoreCase))
+                            continue;
                     if (tests[0] != test)
                         stdOut.Write(", ");
                     var testName = test.Name;
