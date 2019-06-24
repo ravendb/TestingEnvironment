@@ -14,7 +14,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.2.0" />
     <PackageReference Include="Nancy" Version="2.0.0-clinteastwood" />
-    <PackageReference Include="RavenDB.Embedded" Version="4.2.0-rc-42008" />
+    <PackageReference Include="RavenDB.Embedded" Version="4.2.0" />
   </ItemGroup>
 
   <ItemGroup>

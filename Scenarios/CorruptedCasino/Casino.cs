@@ -267,7 +267,8 @@ namespace CorruptedCasino
            // Console.WriteLine($"Done {lottery.Id}");
 
             //Console.WriteLine("Start betting");
-            var t = StartPlacingBets(lottery, 1000);
+            var takeItEasy = Environment.GetEnvironmentVariable("RAVEN_SLOW_MACHINE") ?? "N";
+            var t = StartPlacingBets(lottery, takeItEasy.Contains("Y", StringComparison.InvariantCultureIgnoreCase) ? 1000 : 10);
             Instance.ReportInfo($"Start betting in lottery {lottery.Id}");
             var sleep = (int)(lottery.DueTime - DateTime.UtcNow).TotalMilliseconds;
             if (sleep > 10)

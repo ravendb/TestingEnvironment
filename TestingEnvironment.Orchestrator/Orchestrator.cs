@@ -107,7 +107,7 @@ namespace TestingEnvironment.Orchestrator
 
             foreach (var clusterInfo in _config.Clusters ?? Enumerable.Empty<ClusterInfo>())
             {
-                var cert = clusterInfo.PemFilePath == null || clusterInfo.PemFilePath.Equals("") ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(clusterInfo.PemFilePath);
+                var cert = clusterInfo.PfxFilePath == null || clusterInfo.PfxFilePath.Equals("") ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(clusterInfo.PfxFilePath);
                 var store = new DocumentStore
                 {
                     Database = _config.Databases?[0],
@@ -221,7 +221,7 @@ namespace TestingEnvironment.Orchestrator
                 {
                     HasAuthentication = clusterInfo.HasAuthentication,
                     Name = clusterInfo.Name,
-                    PemFilePath = clusterInfo.PemFilePath
+                    PfxFilePath = clusterInfo.PfxFilePath
                 };
                 var j = 0;
                 orchestratorConfig.Clusters[i].Urls = new string[clusterInfo.Urls.Length];
