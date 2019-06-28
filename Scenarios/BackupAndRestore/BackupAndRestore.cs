@@ -32,8 +32,8 @@ namespace BackupAndRestore
 
         private const int _numberOfCompareExchange = 2_500;
 
-        private readonly List<MyBackup> MyBackupsList = new List<MyBackup>();
-        private readonly List<string> MyRestoreDbsList = new List<string>();
+        private List<MyBackup> MyBackupsList;
+        private List<string> MyRestoreDbsList;
 
         public enum RestoreResult
         {
@@ -51,6 +51,8 @@ namespace BackupAndRestore
         {
             var tasks = new List<Task>();
             var cts = new CancellationTokenSource();
+            MyBackupsList = new List<MyBackup>();
+            MyRestoreDbsList = new List<string>();
 
 
             using (var session = DocumentStore.OpenSession())
@@ -204,7 +206,10 @@ namespace BackupAndRestore
                 if (MyBackupsList[i].RestoreResult == RestoreResult.Failed)
                 {
                     success = false;
-                    ReportFailure("Got Failed Restore", null);
+                    ReportFailure($@"Got Failed Restore: 
+                                    ID:{MyBackupsList[i].BackupTaskId}
+                                    Path:{MyBackupsList[i].BackupPath}
+                                    Status: {MyBackupsList[i].OperationStatus}", null);
                 }
 
                 if (MyBackupsList[i].OperationStatus == OperationStatus.Faulted)
