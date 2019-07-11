@@ -6,7 +6,7 @@ namespace Counters
 {
     public class PutCommentsTest : BaseTest
     {
-        public PutCommentsTest(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Aviv", round)
+        public PutCommentsTest(string orchestratorUrl, string testName, int round, string testid) : base(orchestratorUrl, testName, "Aviv", round, testid)
         {
         }
 

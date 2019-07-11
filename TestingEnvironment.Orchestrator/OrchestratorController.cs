@@ -2,6 +2,7 @@
 using System.Linq;
 using Nancy;
 using Nancy.ModelBinding;
+using ServiceStack;
 using TestingEnvironment.Common;
 
 // ReSharper disable VirtualMemberCallInConstructor
@@ -21,11 +22,17 @@ namespace TestingEnvironment.Orchestrator
                     Uri.UnescapeDataString((string) Request.Query.testName), 
                     Uri.UnescapeDataString((string) Request.Query.testClassName),
                     Uri.UnescapeDataString((string) Request.Query.author),
-                    Uri.UnescapeDataString((string) Request.Query.round)));
+                    Uri.UnescapeDataString((string) Request.Query.round),
+                    Uri.UnescapeDataString((string)Request.Query.testid)
+                    ));
 
             Put("/unregister", @params =>
             {
-                Orchestrator.Instance.UnregisterTest(Uri.UnescapeDataString((string) Request.Query.testName), Uri.UnescapeDataString((string)Request.Query.round));
+                Orchestrator.Instance.UnregisterTest(Uri.UnescapeDataString(
+                        (string) Request.Query.testName), 
+                    Uri.UnescapeDataString((string)Request.Query.round),
+                    Uri.UnescapeDataString((string)Request.Query.testid)
+                    );
                 return Empty;
             });
 
@@ -34,13 +41,10 @@ namespace TestingEnvironment.Orchestrator
             Post("/report", @params =>
             {
                 return Orchestrator.Instance.ReportEvent(Uri.UnescapeDataString((string) Request.Query.testName),
+                    Uri.UnescapeDataString((string)Request.Query.testid),
                     Uri.UnescapeDataString((string)Request.Query.round),
                         this.Bind<EventInfoWithExceptionAsString>());
-            });
-            
-            //get latest test by name
-            Get<dynamic>("/latest-tests", @params => 
-                Response.AsJson(Orchestrator.Instance.GetLastTestByName(Uri.UnescapeDataString((string) Request.Query.testName), Uri.UnescapeDataString((string)Request.Query.round))));
+            });                      
 
             //non success tests
             Get<dynamic>("/failing-tests", @params =>
@@ -67,6 +71,11 @@ namespace TestingEnvironment.Orchestrator
 
             Get<dynamic>("/round-results", _ =>
                  Response.AsJson(Orchestrator.Instance.GetRoundResults((string)Request.Query.round)));
+            
+            // http://localhost:5000/custom-command?command={command}&data={dataString}");
+            Put("/custom-command",
+                @params => Orchestrator.Instance.ExecuteCommand(Uri.UnescapeDataString((string) Request.Query.command),
+                    Uri.UnescapeDataString((string) Request.Query.data)));
         }
     }
 }

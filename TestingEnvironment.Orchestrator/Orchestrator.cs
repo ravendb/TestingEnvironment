@@ -4,20 +4,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using Castle.Windsor.Installer;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Embedded;
-using Sparrow.Json;
+using ServiceStack.Text;
+using Sparrow.Json.Parsing;
 using TestingEnvironment.Client;
 using TestingEnvironment.Common;
 using TestingEnvironment.Common.OrchestratorReporting;
@@ -80,8 +76,8 @@ namespace TestingEnvironment.Orchestrator
             });
             _reportingDocumentStore = EmbeddedServer.Instance.GetDocumentStore(new DatabaseOptions(OrchestratorDatabaseName));
             _reportingDocumentStore.Initialize();
-            new LatestTestByName().Execute(_reportingDocumentStore);
             new FailTests().Execute(_reportingDocumentStore);
+            new FailTestsByCurrentRound().Execute(_reportingDocumentStore);
 
             Console.WriteLine("Done.");
 
@@ -107,7 +103,9 @@ namespace TestingEnvironment.Orchestrator
 
             foreach (var clusterInfo in _config.Clusters ?? Enumerable.Empty<ClusterInfo>())
             {
-                var cert = clusterInfo.PfxFilePath == null || clusterInfo.PfxFilePath.Equals("") ? null : new System.Security.Cryptography.X509Certificates.X509Certificate2(clusterInfo.PfxFilePath);
+                var cert = clusterInfo.PfxFilePath == null || clusterInfo.PfxFilePath.Equals("") ? null :
+                    clusterInfo.Password == null || clusterInfo.Password.Equals("") ? new System.Security.Cryptography.X509Certificates.X509Certificate2(clusterInfo.PfxFilePath) :
+                    new System.Security.Cryptography.X509Certificates.X509Certificate2(clusterInfo.PfxFilePath, clusterInfo.Password);
                 var store = new DocumentStore
                 {
                     Database = _config.Databases?[0],
@@ -142,7 +140,7 @@ namespace TestingEnvironment.Orchestrator
                 rc.FailTestInfoDetails = new TestInfo[results.Count];
                 foreach (var item in results)
                 {
-                    if (item.Finished == true)
+                    if (item.Finished)
                     {
                         if (fails.ContainsKey(item.Name))
                             fails[item.Name] = fails[item.Name] + 1;
@@ -162,7 +160,7 @@ namespace TestingEnvironment.Orchestrator
                     k++;
                 }
 
-                rc.TotalTestsInRound = session.Query<TestInfo>().Where(x => x.Author != "TestRunner" && x.Round == rc.Round, true).CountAsync().Result;
+                rc.TotalTestsInRound = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Where(x => x.Author != "TestRunner" && x.Round == rc.Round, true).CountAsync().Result;
                 rc.UniqueFailCount = fails.Count;
 
                 var i = 0;
@@ -221,7 +219,8 @@ namespace TestingEnvironment.Orchestrator
                 {
                     HasAuthentication = clusterInfo.HasAuthentication,
                     Name = clusterInfo.Name,
-                    PfxFilePath = clusterInfo.PfxFilePath
+                    PfxFilePath = clusterInfo.PfxFilePath,
+                    Password = clusterInfo.Password
                 };
                 var j = 0;
                 orchestratorConfig.Clusters[i].Urls = new string[clusterInfo.Urls.Length];
@@ -239,7 +238,7 @@ namespace TestingEnvironment.Orchestrator
 
             return orchestratorConfig;
         }
-        
+
 
 
         public bool TrySetConfigSelectorStrategy(string strategyName, string dbIndexStr)
@@ -251,12 +250,12 @@ namespace TestingEnvironment.Orchestrator
                 return false;
 
             if (dbIndexStr != null &&
-                dbIndexStr.Equals("") == false && 
+                dbIndexStr.Equals("") == false &&
                 int.TryParse(dbIndexStr, out var dbIndex))
             {
                 // re-init strategy with single database
                 var newConfig = GetOrchestratorConfigurationCopy(_config);
-                newConfig.Databases = new[] {_config.Databases[dbIndex]};
+                newConfig.Databases = new[] { _config.Databases[dbIndex] };
                 strategy.Initialize(newConfig);
             }
 
@@ -266,7 +265,7 @@ namespace TestingEnvironment.Orchestrator
 
         public ITestConfigSelectorStrategy[] ConfigSelectorStrategies => _configSelectorStrategies;
 
-        public TestConfig RegisterTest(string testName, string testClassName, string author, string round)
+        public TestConfig RegisterTest(string testName, string testClassName, string author, string round, string testid)
         {
             if (int.TryParse(round, out var roundInt) == false)
                 roundInt = -1;
@@ -282,6 +281,7 @@ namespace TestingEnvironment.Orchestrator
                 var now = DateTime.UtcNow;
                 var testInfo = new TestInfo
                 {
+                    TestId = testid,
                     Name = testName,
                     ExtendedName = $"{testName} ({now})",
                     TestClassName = testClassName,
@@ -301,58 +301,33 @@ namespace TestingEnvironment.Orchestrator
         }
 
         //mostly needed to detect if some client is stuck/hang out    
-        public void UnregisterTest(string testName, string roundStr)
-        {
-            TestInfo latestTestInfo = null;
-            var sp = Stopwatch.StartNew();
-            do
-            {
-                try
-                {
-                    var round = int.Parse(roundStr);
-                    using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
-                    {
-                        session.Advanced.UseOptimisticConcurrency = true;
-                        var latestTestInfos = session.Query<TestInfo>().Where(x => x.Name == testName && x.Round == round).ToList();
-
-                        var biggest = 0;
-                        foreach (var item in latestTestInfos)
-                        {
-                            var num = int.Parse(item.Id.Split("/")[1].Split("-")[0]);
-                            if (num > biggest)
-                            {
-                                latestTestInfo = item;
-                                biggest = num;
-                            }
-                        }
-
-                        if (latestTestInfo != null)
-                        {
-                            latestTestInfo.Finished = true;
-                            latestTestInfo.End = DateTime.UtcNow;
-                            session.Store(latestTestInfo);
-                            session.SaveChanges();
-                        }
-                    }
-                    break;
-                }
-                catch (Exception e)
-                {
-                    Console.Write($"-*{latestTestInfo?.Id} / {e.Message}*-");
-                    if (sp.Elapsed.TotalSeconds > 30)
-                        throw;
-                }
-                Thread.Sleep(3000);
-            } while (true);
-        }
-
-        public TestInfo GetLastTestByName(string testName, string roundStr)
+        public void UnregisterTest(string testName, string roundStr, string testid)
         {
             var round = int.Parse(roundStr);
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
                 session.Advanced.UseOptimisticConcurrency = true;
-                return session.Query<TestInfo>().OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName && x.Round == round);
+                var latestTestInfos = session.Query<TestInfo>()
+                    .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Where(x =>
+                        x.Name == testName && x.Round == round && x.TestId == testid).ToList();
+                if (latestTestInfos.Count != 1)
+                {
+                    // This is fatal and should not happen, store this error:
+                    var newerr = new InternalError
+                    {
+                        Details =
+                            $"At {DateTime.UtcNow} Unregister: tried to session.Query<TestInfo>().Where(x => x.Name == testName && x.Round == round && x.TestId == testid).ToList(); values: {testName}, {roundStr}, {testid} .. but got list in size of: {latestTestInfos.Count}",
+                        StackTrace = Environment.StackTrace
+                    };
+                    session.Store(newerr);
+                }
+                else
+                {
+                    latestTestInfos.First().Finished = true;
+                    latestTestInfos.First().End = DateTime.UtcNow;
+                    session.Store(latestTestInfos.First());
+                    session.SaveChanges();
+                }
             }
         }
 
@@ -393,16 +368,29 @@ namespace TestingEnvironment.Orchestrator
             return round;
         }
 
-        public EventResponse ReportEvent(string testName, string round, EventInfoWithExceptionAsString @event)
+        public EventResponse ReportEvent(string testName, string testid, string round, EventInfoWithExceptionAsString @event)
         {
             var num = int.Parse(round);
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
                 session.Advanced.UseOptimisticConcurrency = true;
-                var latestTest = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).OrderByDescending(x => x.Start).FirstOrDefault(x => x.Name == testName && x.Round == num);
-                if (latestTest != null)
+
+                var latestTestInfos = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Where(x => x.Name == testName && x.Round == num && x.TestId == testid).ToList();
+                if (latestTestInfos.Count != 1)
                 {
-                    latestTest.Events.Add(@event);
+                    // This is fatal and should not happen, store this error:
+                    var newerr = new InternalError
+                    {
+                        Details =
+                            $"At {DateTime.UtcNow} ReportEvent: tried to session.Query<TestInfo>().Where(x => x.Name == testName && x.Round == num && x.TestId == testid).ToList(); values: {testName}, {num}, {testid} .. but got list in size of: {latestTestInfos.Count}",
+                        StackTrace = Environment.StackTrace
+                    };
+                    session.Store(newerr);
+                    session.SaveChanges();
+                }
+                else
+                {
+                    latestTestInfos.First().Events.Add(@event);
                     session.SaveChanges();
                 }
 
@@ -412,6 +400,49 @@ namespace TestingEnvironment.Orchestrator
                     Type = EventResponse.ResponseType.Ok
                 };
             }
+        }
+
+        public string ExecuteCommand(string command, string data)
+        {
+            dynamic rc = new JObject();
+            if (Enum.TryParse(command, out Command cmd) == false)
+            {
+                rc.CommandStatus = "Failed";
+                rc.Reason = $"Failed to parse round data {data} into round integer";
+                return rc.ToString();
+            }
+
+            switch (cmd)
+            {
+                case Command.RemoveLastRunningTestInfo:
+                    var round = int.Parse(data);
+                    using (var session = _reportingDocumentStore.OpenAsyncSession(OrchestratorDatabaseName))
+                    {
+                        var results = session.Query<TestInfo, FailTests>().Customize(y => y.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).
+                            Where(x => x.Round == round && x.Finished == false && x.Name.Equals("CleanLastRound") == false, true).ToListAsync().Result;
+                        if (results.Count != 1)
+                        {
+                            rc.CommandStatus = "Failed";
+                            rc.Reason = $"Query result list count is {results.Count} and should be only 1. Probably fails exists";
+                            return rc.ToString();
+                        }
+
+                        session.Delete(results.First().Id);
+                        session.SaveChangesAsync().Wait();                        
+                    }
+
+                    break;
+                default:
+                {
+                    rc.CommandStatus = "Failed";
+                    rc.Reason = $"Invalid command '{cmd}' passed to ExecuteCommand";
+                    return rc.ToString();
+                }
+            }
+
+            rc.CommandStatus = "Success";
+            rc.Reason = $"'{cmd}' successfully for data='{data}'";
+            return rc.ToString();
         }
 
         private void EnsureDatabaseExists(string databaseName, IDocumentStore documentStore, bool truncateExisting = false)

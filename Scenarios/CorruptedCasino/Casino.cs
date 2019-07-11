@@ -31,7 +31,7 @@ namespace CorruptedCasino
         //    Name = Store.Database;
         //}
 
-        public Casino(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Karmel", round)
+        public Casino(string orchestratorUrl, string testName, int round, string testid) : base(orchestratorUrl, testName, "Karmel", round, testid)
         {
             Instance = this;
         }

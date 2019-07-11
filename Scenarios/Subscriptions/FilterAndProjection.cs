@@ -24,7 +24,7 @@ namespace Subscriptions
         private static Guid GenralGuid = Guid.NewGuid();
         private static readonly CancellationTokenSource[] _shipperCancellationTokenSource = new CancellationTokenSource[ShippersCount];
 
-        public FilterAndProjection(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Efrat", round)
+        public FilterAndProjection(string orchestratorUrl, string testName, int round, string testid) : base(orchestratorUrl, testName, "Efrat", round, testid)
         {
         }
 

@@ -7,7 +7,7 @@ namespace BackupTaskCleaner
 {
     public class BackupTaskCleaner : BaseTest
     {
-        public BackupTaskCleaner(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Egor", round)
+        public BackupTaskCleaner(string orchestratorUrl, string testName, int round, string testid) : base(orchestratorUrl, testName, "Egor", round, testid)
         {
         }
 
@@ -31,9 +31,9 @@ namespace BackupTaskCleaner
                 var dbRecord = await DocumentStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db));
                 var pbTasksCount = dbRecord.PeriodicBackups.Count;
 
-                if (pbTasksCount < 5)
+                if (pbTasksCount < 3)
                 {
-                    ReportSuccess($"PeriodicBackups.Count {pbTasksCount} < 5 .. skipping..");
+                    ReportSuccess($"PeriodicBackups.Count {pbTasksCount} < 3 .. skipping..");
                     return;
                 }
 

@@ -8,7 +8,7 @@ namespace Counters
 {
     public class PatchCommentRatingsBasedOnCounters : BaseTest
     {
-        public PatchCommentRatingsBasedOnCounters(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Aviv", round)
+        public PatchCommentRatingsBasedOnCounters(string orchestratorUrl, string testName, int round, string testid) : base(orchestratorUrl, testName, "Aviv", round, testid)
         {
         }
 
@@ -44,7 +44,7 @@ namespace Counters
 	                           var dislikes = counter(comment, 'dislikes');
 	                           var rating = ((likes / (likes + dislikes)) * 100) || 0;
 	                           comment.Rating = rating;
-                               comment.LastModified = new Date('" + now + @"');
+                               comment.LastModified = new Date('" + now.ToString("o") + @"');
                            }";
 
             var op = DocumentStore.Operations.Send(new PatchByQueryOperation(script));

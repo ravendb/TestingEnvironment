@@ -38,4 +38,10 @@ namespace TestingEnvironment.Common
         public string Exception { get; set; }
         public string EventTime { get; set; }
     }
+
+    public enum Command
+    {
+        None = 0,
+        RemoveLastRunningTestInfo
+    }
 }

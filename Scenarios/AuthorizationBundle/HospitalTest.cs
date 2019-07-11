@@ -10,7 +10,7 @@ namespace AuthorizationBundle
 {
     public class HospitalTest : BaseTest
     {
-        public HospitalTest(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Tal", round)
+        public HospitalTest(string orchestratorUrl, string testName, int round, string testid) : base(orchestratorUrl, testName, "Tal", round, testid)
         {
 
         }
@@ -121,7 +121,7 @@ namespace AuthorizationBundle
         private readonly HashSet<TestUser> OrphanUsers = new HashSet<TestUser>();
         private void GenerateOrphanUsers()
         {
-            for (var i = 0; i < 300; i++)
+            for (var i = 0; i < 150; i++)
             {
                 OrphanUsers.Add(GenerateRandomUser());
             }            
@@ -132,14 +132,14 @@ namespace AuthorizationBundle
         {
             _rootGroup = GenerateGroup(session, null, "Root group");
             var prevLevelGroups = new[] {_rootGroup};
-            for (var numberOfLevels = 0; numberOfLevels < 3; numberOfLevels++)
+            for (var numberOfLevels = 0; numberOfLevels < 2; numberOfLevels++)
             {
                 var nextLevelGroups = new List<TestGroup>();
                 for (var i = 0; i < prevLevelGroups.Length; i++)
                 {
                     var currGroup = prevLevelGroups[i];
                     var rand = new Random(GetStableHashCode(currGroup.Id));
-                    var numberOfSubGroups = rand.Next(2, 4);
+                    var numberOfSubGroups = rand.Next(1, 2);
                     for (var j = 0; j < numberOfSubGroups; j++)
                     {
                         nextLevelGroups.Add(GenerateGroup(session, currGroup.Id));
@@ -180,7 +180,7 @@ namespace AuthorizationBundle
         private void GenerateMembersForGroup(AuthorizedSession session, string groupName)
         {
             var random = new Random(GetStableHashCode(groupName));
-            var numberOfMembers = random.Next(5, 10);
+            var numberOfMembers = random.Next(2, 6);
             for (int i = 0; i < numberOfMembers; i++)
             {
                 var user = GenerateRandomUser();

@@ -18,7 +18,7 @@ namespace BackupAndRestore
 {
     public class BackupAndRestore : BaseTest
     {
-        public BackupAndRestore(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Egor", round)
+        public BackupAndRestore(string orchestratorUrl, string testName, int round, string testid) : base(orchestratorUrl, testName, "Egor", round, testid)
         { }
 
         private const string _chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -278,7 +278,14 @@ namespace BackupAndRestore
                     await s.StoreAsync(a).ConfigureAwait(false);
                 }
 
-                await s.SaveChangesAsync().ConfigureAwait(false);
+                try
+                {
+                    await s.SaveChangesAsync().ConfigureAwait(false);
+                }
+                catch (ConcurrencyException)
+                {
+                    // ignore, we run tasks in parallel
+                }
             }
         }
 
@@ -308,7 +315,14 @@ namespace BackupAndRestore
                     await s.StoreAsync(d).ConfigureAwait(false);
                 }
 
-                await s.SaveChangesAsync().ConfigureAwait(false);
+                try
+                {
+                    await s.SaveChangesAsync().ConfigureAwait(false);
+                }
+                catch (ConcurrencyException)
+                {
+                    // ignore, we run tasks in parallel
+                }
             }
         }
 
@@ -344,7 +358,14 @@ namespace BackupAndRestore
                     await s.StoreAsync(m).ConfigureAwait(false);
                 }
 
-                await s.SaveChangesAsync().ConfigureAwait(false);
+                try
+                {
+                    await s.SaveChangesAsync().ConfigureAwait(false);
+                }
+                catch (ConcurrencyException)
+                {
+                    // ignore, we run tasks in parallel
+                }
             }
         }
 
@@ -397,9 +418,9 @@ namespace BackupAndRestore
             {
                 await Task.Delay(2000).ConfigureAwait(false);
                 backupStatus = DocumentStore.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
-                if (++retries > 90) // 5 minutes
+                if (++retries > 65*60/2) // 65 minutes
                 {
-                    ReportFailure("RunBackupTask: Failed to get backup {backupTaskId} status", null);
+                    ReportFailure($"RunBackupTask: Failed to get backup {backupTaskId} status for more then an hour (retries={retries})", null);
                     return;
                 }
             }
