@@ -25,7 +25,8 @@ namespace TestingEnvironment.Orchestrator.ConfigSelectorStrategies
                 Database = configuration.Databases[rnd],
                 Urls = configuration.Clusters[0].Urls,
                 StrategyName = Name,
-                PfxFilePath = configuration.Clusters[0].PfxFilePath
+                PfxFilePath = configuration.Clusters[0].PfxFilePath,
+                Password = configuration.Clusters[0].Password
             });
         }
 

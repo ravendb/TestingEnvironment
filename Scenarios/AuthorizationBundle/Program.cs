@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Documents;
 
@@ -64,7 +65,7 @@ namespace AuthorizationBundle
 
         private static void RunAuthorizationBundleScenarios(string url)
         {
-            using (var client = new HospitalTest(url, "HospitalTest", -1))
+            using (var client = new HospitalTest(url, "HospitalTest", -1, Guid.NewGuid().ToString()))
             {
                 client.Initialize();
                 client.RunTest();

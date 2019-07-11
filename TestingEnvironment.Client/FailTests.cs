@@ -15,16 +15,29 @@ namespace TestingEnvironment.Client
                            select new
                            {
                                test.Id,
-                               test.Start,
+                               test.TestId,
                                test.Name,
                                test.Round,
-                               test.Config,
-                               test.Author,
-                               test.ExtendedName,
-                               test.TestClassName,
-                               test.End,
-                               test.Events
+                               test.Finished,
+                               test.Author
                            };
+        }
+    }
+
+    public class FailTestsByCurrentRound : AbstractIndexCreationTask<TestInfo>
+    {
+        public FailTestsByCurrentRound()
+        {
+            Map = tests => from test in tests
+                let round = LoadDocument<StaticInfo>("staticInfo/1").Round
+                where (test.Events.All(x => x.Type != EventInfoWithExceptionAsString.EventType.TestSuccess) ||
+                       test.Events.Any(x => x.Type == EventInfoWithExceptionAsString.EventType.TestFailure)) &&
+                      test.Finished == true &&
+                      test.Round == round
+                select new
+                {
+                    test.Id                    
+                };            
         }
     }
 }

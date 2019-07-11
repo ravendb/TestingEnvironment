@@ -41,6 +41,11 @@ namespace TestingEnvironment.Orchestrator
                 using (var session = store.OpenAsyncSession())
                 {
                     var roundResult = session.LoadAsync<StaticInfo>("staticInfo/1").Result;
+                    if (roundResult == null)
+                    {
+                        stdOut.WriteLine("Warning: There is no staticInfo/1 doc yet (ok for the first run)");
+                        return;
+                    }
                     var round = roundResult.Round;
                     var copyRound = round;
                     var results = session.Query<TestInfo, FailTests>().Where(x => x.Round == copyRound, true).ToListAsync().Result;
@@ -136,7 +141,7 @@ namespace TestingEnvironment.Orchestrator
                     }
 
                     var copyRound2 = round;
-                    var total = session.Query<TestInfo>().Where(x => x.Author != "TestRunner" && x.Round == copyRound2, true).CountAsync().Result;
+                    var total = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Where(x => x.Author != "TestRunner" && x.Round == copyRound2, true).CountAsync().Result;
                     stdOut.WriteLine($"Out of total={total}");
 
                     var color = "good"; // green

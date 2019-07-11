@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using CustomOrchestratorCommands;
 using Raven.Client.Documents;
 using TestingEnvironment.Client;
 using TestingEnvironment.Common.OrchestratorReporting;
@@ -14,7 +15,7 @@ namespace TestsRunner
         public int Round;
         public string DbIndex;
 
-        public StrategySet(string orchestratorUrl, string testName, int round, string dbIndex) : base(orchestratorUrl, testName, "TestRunner", round)
+        public StrategySet(string orchestratorUrl, string testName, int round, string dbIndex, string testid) : base(orchestratorUrl, testName, "TestRunner", round, testid)
         {
             Round = round;
             DbIndex = dbIndex;
@@ -22,7 +23,7 @@ namespace TestsRunner
 
         public override void RunActualTest()
         {
-            var success = SetStrategy("FirstClusterRandomDatabaseSelector", DbIndex);            
+            var success = SetStrategy("FirstClusterRandomDatabaseSelector", DbIndex);
             Round = SetRound(Round);
             ReportInfo($"Round set to {Round}");
             if (success)
@@ -47,7 +48,7 @@ namespace TestsRunner
                     --ravendbUrl=<url>
                          Embedded RavenDB url in orchestrator
                                                                                      
-                     --output-to-file=<filepath>                                     
+                     --stdOut=<filepath>                                     
                          Redirect output to a file. If option not specified, StdOut  
                          will be used.                                               
                      --round=<round number>                                          
@@ -56,9 +57,13 @@ namespace TestsRunner
                          setting to 0 will increase current round by one.     
                     --dbIndex=<dbIndex>
                          Optionally for FirstClusterStrategy, select specific database from config file
+                    --cleanLastRunning=<round>
+                         Delete not finished entry if single one exists on round.
+                         Setting round to 0 will use current round.
+                         Utility will exit upon completing deletion.
 ";
 
-            var defaults = new TestRunnerArgs {Round = "-1" };
+            var defaults = new TestRunnerArgs { Round = "-1" };
             var options = new HandleArgs<TestRunnerArgs>().ProcessArgs(args, helpText, defaults);
             TextWriter stdOut = options.StdOut == null ? Console.Out : File.CreateText(options.StdOut);
             if (options.OrchestratorUrl == null || options.RavendbUrl == null)
@@ -66,6 +71,29 @@ namespace TestsRunner
                 Console.WriteLine("--orchestratorUrl and --ravendbUrl must be specified");
                 Console.WriteLine();
                 Console.WriteLine(helpText);
+                Environment.Exit(1);
+            }
+
+            if (options.CleanLastRunning != null)
+            {
+                if (int.TryParse(options.CleanLastRunning, out var cleanInRound) == false)
+                {
+                    Console.WriteLine("--cleanLastRunning must have a valid round value");
+                    Console.WriteLine();
+                    Console.WriteLine(helpText);
+                    Environment.Exit(1);
+                }
+
+                using (var cleanInstance = new CustomOrchestratorCommands.CustomOrchestratorCommands(
+                    options.OrchestratorUrl, "CleanLastRound", int.Parse(options.Round), Guid.NewGuid().ToString()))
+                {
+                    cleanInstance.Cmd = TestingEnvironment.Common.Command.RemoveLastRunningTestInfo;
+                    cleanInstance.CmdData = cleanInRound.ToString();
+                    cleanInstance.Initialize();
+                    cleanInstance.RunActualTest();
+                }
+
+                Console.WriteLine($"CleanLastRound sent for round {cleanInRound}");
                 Environment.Exit(1);
             }
 
@@ -88,7 +116,7 @@ namespace TestsRunner
 
                 stdOut.WriteLine("Setting Strategy: FirstClusterRandomDatabaseStrategy");
                 int roundResult;
-                using (var client = new StrategySet(options.OrchestratorUrl, "StrategySet", int.Parse(options.Round), options.DbIndex))
+                using (var client = new StrategySet(options.OrchestratorUrl, "StrategySet", int.Parse(options.Round), options.DbIndex, Guid.NewGuid().ToString()))
                 {
                     client.Initialize();
                     client.RunTest();
@@ -104,6 +132,7 @@ namespace TestsRunner
 
                 var tests = new[]
                 {
+                    typeof(CleanerTask.CleanerTask),
                     typeof(BlogComment.Program.PutCommentsTest),
                     typeof(Counters.PutCommentsTest),
                     typeof(Counters.PutCountersOnCommentsBasedOnTopic),
@@ -124,29 +153,7 @@ namespace TestsRunner
                     typeof(BackupAndRestore.BackupAndRestore)
                 };
 
-                var ctorTypes = new[] {typeof(string), typeof(string), typeof(int)};
-                var testsList = new List<BaseTest>();
-                foreach (var test in tests)
-                {
-                    if (test.Name.Equals("BackupAndRestore") &&
-                        (Environment.GetEnvironmentVariable("RAVEN_CLOUD_MACHINE") ?? "N").Contains("Y", StringComparison.InvariantCultureIgnoreCase))
-                            continue;
-                    if (tests[0] != test)
-                        stdOut.Write(", ");
-                    var testName = test.Name;
-                    var testclass = test.GetConstructor(ctorTypes);
-                    stdOut.Write(testName);
-                    var instance = (BaseTest) testclass.Invoke(new object[]
-                        {options.OrchestratorUrl, testName, roundResult});
-                    if (instance == null)
-                    {
-                        stdOut.WriteLine($"Internal Error: no appropriate Ctor for {testName}");
-                        Environment.Exit(1);
-                    }
-
-                    testsList.Add(instance);
-                }
-
+                var ctorTypes = new[] { typeof(string), typeof(string), typeof(int), typeof(string) };
                 stdOut.WriteLine();
 
                 stdOut.WriteLine();
@@ -154,6 +161,46 @@ namespace TestsRunner
                 int num = 1;
                 while (true)
                 {
+                    var testsList = new List<BaseTest>();
+                    foreach (var test in tests)
+                    {
+                        if (num % 500 != 0 && test.Name.Equals("CleanerTask"))
+                        {
+                            continue;
+                        }
+
+                        if (num % 5 != 0)
+                        {
+                            switch (test.Name)
+                            {
+                                case "BackupTaskCleaner":
+                                case "BackupAndRestore":
+                                    continue;
+                            }
+                        }
+
+                        if (test.Name.Equals("BackupAndRestore") &&
+                            (Environment.GetEnvironmentVariable("RAVEN_CLOUD_MACHINE") ?? "N").Contains("Y", StringComparison.InvariantCultureIgnoreCase))
+                            continue;
+
+                        if (tests[0] != test)
+                            stdOut.Write(", ");
+                        var testName = test.Name;
+                        var testid = Guid.NewGuid().ToString();
+                        var testclass = test.GetConstructor(ctorTypes);
+                        stdOut.Write(testName);
+                        var instance = (BaseTest)testclass.Invoke(new object[]
+                            {options.OrchestratorUrl, testName, roundResult, testid});
+                        if (instance == null)
+                        {
+                            stdOut.WriteLine($"Internal Error: no appropriate Ctor for {testName}");
+                            Environment.Exit(1);
+                        }
+
+                        testsList.Add(instance);
+                    }
+
+
                     foreach (var test in testsList)
                     {
                         var testDisposed = false;
@@ -170,10 +217,10 @@ namespace TestsRunner
                             stdOut.Write($" Done @ {sp.Elapsed}");
                             using (var store = new DocumentStore
                             {
-                                Urls = new[] {options.RavendbUrl},
+                                Urls = new[] { options.RavendbUrl },
                                 Database = "Orchestrator"
                             }.Initialize())
-                            {                                
+                            {
                                 using (var session = store.OpenAsyncSession())
                                 {
                                     stdOut.Write(" Reading index results...");
@@ -206,6 +253,10 @@ namespace TestsRunner
                         }
                     }
 
+                    if (num / testsList.Count % 3 == 0)
+                    {
+                        // try send TeAgent clear 
+                    }
                     stdOut.WriteLine();
                 }
             }
@@ -226,7 +277,8 @@ namespace TestsRunner
         public string OrchestratorUrl { get; set; }
         public string RavendbUrl { get; set; }
         public string Round { get; set; }
-        public string StdOut  { get; set; }
+        public string StdOut { get; set; }
         public string DbIndex { get; set; }
+        public string CleanLastRunning { get; set; }
     }
 }

@@ -8,7 +8,7 @@ namespace BlogComment
     {
         static void Main(string[] args)
         {
-            using (var client = new PutCommentsTest(args[0], "PutCommentsTest", -1))
+            using (var client = new PutCommentsTest(args[0], "PutCommentsTest", -1, Guid.NewGuid().ToString()))
             {
                 client.Initialize();
                 client.RunTest();
@@ -46,7 +46,7 @@ namespace BlogComment
 
             #endregion
 
-            public PutCommentsTest(string orchestratorUrl, string testName, int round) : base(orchestratorUrl, testName, "Aviv", round)
+            public PutCommentsTest(string orchestratorUrl, string testName, int round, string testid) : base(orchestratorUrl, testName, "Aviv", round, testid)
             {
             }
 
