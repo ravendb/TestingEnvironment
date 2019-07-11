@@ -418,7 +418,7 @@ namespace Subscriptions
                         Age = i
                     }, $"user2.{GeneralGuid}/{guid}");
                 }                
-                ReportInfo($"Finish inserting users docs");
+                
             }
         }
 
