@@ -88,7 +88,7 @@ namespace Subscriptions
         private Guid[] _productsGuid;
         private Guid[] _shipperGuid;
         private List<SubscriptionWorker<Order>> _ordersProcessingWorkers;
-        private Guid GenralGuid;       
+        private Guid GeneralGuid;       
 
 
         public FilterAndProjection(string orchestratorUrl, string testName, int round, string testid) : base(orchestratorUrl, testName, "Efrat", round, testid)
@@ -100,7 +100,7 @@ namespace Subscriptions
         {
             using (DocumentStore.Initialize())
             {
-                GenralGuid = Guid.NewGuid();
+                GeneralGuid = Guid.NewGuid();
                 _shipper = new int[ShippersCount];
                 _shipperRes = new int[ShippersCount];
                 _productsGuid = new Guid[ProductsCount];
@@ -138,14 +138,14 @@ namespace Subscriptions
                     ReportInfo("Create subscriptions : UsersSubscription");
                     var nameOFUserSubscriptionToAppendProductsToUsers = DocumentStore.Subscriptions.Create(new SubscriptionCreationOptions<User2>
                     {
-                        Name = UsersSubscriptionName,
+                        Name = GetUsersSubscriptionName(GeneralGuid),
                         Filter = x => (x.Age % 2) == 0 && x.Products==null
                     });
 
                     ReportInfo("Create subscriptions : CreateOrderSubscription");
                     var nameOfUsersSubscriptionToCreateOrders = DocumentStore.Subscriptions.Create(new SubscriptionCreationOptions<User2>
                     {
-                        Name = OrdersSubscriptionName,
+                        Name = GetOrdersSubscriptionName(GeneralGuid),
                         Filter = x => (x.Products != null),
                         Projection = x => (new
                         {
@@ -178,14 +178,14 @@ namespace Subscriptions
                     for (int i = 0; i < _shipperGuid.Length; i++)
                     {
                         Guid shipper = _shipperGuid[i];
-                        var s = "shipper." + GenralGuid + "/" + shipper;
+                        var s = "shipper." + GeneralGuid + "/" + shipper;
                         var ordersSubscriptionForShipper = new SubscriptionCreationOptions<Order>
                         {
-                            Name = $"shipperSubscription-{i}.{GenralGuid}",
+                            Name = $"shipperSubscription-{i}.{GeneralGuid}",
                             Filter = x => (x.ShipVia.StartsWith(s))
                         };
 
-                        ReportInfo($"Create subscriptions : shipperSubscription-{i}.{GenralGuid}");
+                        ReportInfo($"Create subscriptions : shipperSubscription-{i}.{GeneralGuid}");
                         var ordersSubscriptionName = DocumentStore.Subscriptions.Create(ordersSubscriptionForShipper);
 
                         var ordersSubscriptionWorkerOptions = new SubscriptionWorkerOptions(ordersSubscriptionName)
@@ -195,7 +195,7 @@ namespace Subscriptions
                             CloseWhenNoDocsLeft = false
                         };
 
-                        ReportInfo($"shipperSubscription-{i}.{GenralGuid}: get subscriptions worker");
+                        ReportInfo($"shipperSubscription-{i}.{GeneralGuid}: get subscriptions worker");
                         var shipperSubscriptionWorker = DocumentStore.Subscriptions.GetSubscriptionWorker<Order>(ordersSubscriptionWorkerOptions);
                                                 
                         ReportInfo($"Start counting orders for shipper {i}. Id: {_shipperGuid[i]}");
@@ -254,77 +254,113 @@ namespace Subscriptions
                     }
                     var cleanupTasks = new List<Task>();
 
-                    using (var session = DocumentStore.OpenSession())
-                    {
-                        cleanupTasks.Add(DocumentStore.Operations.Send(new DeleteByQueryOperation(
-                            new IndexQuery()
-                            {
-                                Query = $"from User2s where startsWith(Id(), 'user2.{GenralGuid}/')"
-                            }
-                            , new QueryOperationOptions
-                            {
-                                StaleTimeout = TimeSpan.FromMinutes(5)
-                            }
-                        )).WaitForCompletionAsync(TimeSpan.FromMinutes(10)));
+                    var getSubscriptionsTask = DocumentStore.Subscriptions.GetSubscriptionsAsync(0, 1024);
+                    getSubscriptionsTask.Wait();
+                    var subscriptions = getSubscriptionsTask.Result;
 
-                        cleanupTasks.Add(DocumentStore.Operations.Send(new DeleteByQueryOperation(
-                             new IndexQuery()
-                             {
-                                 Query = $"from shippers where startsWith(Id(), 'shipper.{GenralGuid}/')"
-                             }, new QueryOperationOptions
-                             {
-                                 StaleTimeout = TimeSpan.FromMinutes(5)
-                             }
-                             )).WaitForCompletionAsync(TimeSpan.FromMinutes(10)));
+                    // start from disabling all current subscriptions
+                    DocumentStore.Subscriptions.Disable(GetUsersSubscriptionName(GeneralGuid));
+                    DocumentStore.Subscriptions.Disable(GetOrdersSubscriptionName(GeneralGuid));
 
-                        cleanupTasks.Add(DocumentStore.Operations.Send(new DeleteByQueryOperation(
-                             new IndexQuery()
-                             {
-                                 Query = $"from orders where startsWith(Id(), 'order.{GenralGuid}/')"
-                             },
-                            new QueryOperationOptions
-                            {
-                                StaleTimeout = TimeSpan.FromMinutes(5)
-                            }
-                             )).WaitForCompletionAsync(TimeSpan.FromMinutes(10)));
-
-                        cleanupTasks.Add(DocumentStore.Operations.Send(new DeleteByQueryOperation(
-                             new IndexQuery()
-                             {
-                                 Query = $"from Products where startsWith (Id(), 'products.{GenralGuid}/')"
-                             },
-                            new QueryOperationOptions
-                            {
-                                StaleTimeout = TimeSpan.FromMinutes(5)
-                            }
-                             )).WaitForCompletionAsync(TimeSpan.FromMinutes(10)));
-                    }
-
-                    try
-                    {
-                        Task.WaitAll(cleanupTasks.ToArray());
-                    }
-                    catch (Exception ex)
-                    {
-
-                        ReportFailure("Documents cleanup failed", ex);
-                    }
-
-                    DocumentStore.Subscriptions.Delete(UsersSubscriptionName);
-                    DocumentStore.Subscriptions.Delete(OrdersSubscriptionName);
 
                     for (int i = 0; i < _shipperGuid.Length; i++)
-                    {
-                        DocumentStore.Subscriptions.Delete($"shipperSubscription-{i}.{GenralGuid}");
+                    {                        
+                        DocumentStore.Subscriptions.Disable($"shipperSubscription-{i}.{GeneralGuid}");                        
                     }
+
+                    var createOredersSubscriptions = subscriptions.Where(x => x.SubscriptionName.StartsWith("CreateOrderSubscription.") && x.Disabled)
+                        .Select(x=>x.SubscriptionName.Split('.')[1]).ToList();
+
+                    if (createOredersSubscriptions.Count >= 5)
+                    {
+                        foreach (var currentGuid in createOredersSubscriptions)
+                        {
+                            try
+                            {
+                                ClearDataOfFinishedTestRunByGuid(cleanupTasks, currentGuid);
+                            }
+                            catch (Exception ex)
+                            {
+                                ReportInfo("Cleanup failed", new Dictionary<string, string> {{"Exception", ex.ToString() }});
+                            }
+                        }
+                    }
+                    
                 }
               
             }
         }
 
-        private string OrdersSubscriptionName => $"CreateOrderSubscription.{GenralGuid}";
+        private void ClearDataOfFinishedTestRunByGuid(List<Task> cleanupTasks, string currentGuid)
+        {
+            using (var session = DocumentStore.OpenSession())
+            {
+                cleanupTasks.Add(DocumentStore.Operations.Send(new DeleteByQueryOperation(
+                    new IndexQuery()
+                    {
+                        Query = $"from User2s where startsWith(Id(), 'user2.{currentGuid}/')"
+                    }
+                    , new QueryOperationOptions
+                    {
+                        StaleTimeout = TimeSpan.FromMinutes(5)
+                    }
+                )).WaitForCompletionAsync(TimeSpan.FromMinutes(10)));
 
-        private string UsersSubscriptionName => $"UsersSubscription.{GenralGuid}";        
+                cleanupTasks.Add(DocumentStore.Operations.Send(new DeleteByQueryOperation(
+                     new IndexQuery()
+                     {
+                         Query = $"from shippers where startsWith(Id(), 'shipper.{currentGuid}/')"
+                     }, new QueryOperationOptions
+                     {
+                         StaleTimeout = TimeSpan.FromMinutes(5)
+                     }
+                     )).WaitForCompletionAsync(TimeSpan.FromMinutes(10)));
+
+                cleanupTasks.Add(DocumentStore.Operations.Send(new DeleteByQueryOperation(
+                     new IndexQuery()
+                     {
+                         Query = $"from orders where startsWith(Id(), 'order.{currentGuid}/')"
+                     },
+                    new QueryOperationOptions
+                    {
+                        StaleTimeout = TimeSpan.FromMinutes(5)
+                    }
+                     )).WaitForCompletionAsync(TimeSpan.FromMinutes(10)));
+
+                cleanupTasks.Add(DocumentStore.Operations.Send(new DeleteByQueryOperation(
+                     new IndexQuery()
+                     {
+                         Query = $"from Products where startsWith (Id(), 'products.{currentGuid}/')"
+                     },
+                    new QueryOperationOptions
+                    {
+                        StaleTimeout = TimeSpan.FromMinutes(5)
+                    }
+                     )).WaitForCompletionAsync(TimeSpan.FromMinutes(10)));
+            }
+
+            try
+            {
+                Task.WaitAll(cleanupTasks.ToArray());
+            }
+            catch (Exception ex)
+            {
+
+                ReportFailure("Documents cleanup failed", ex);
+            }
+
+            DocumentStore.Subscriptions.Delete(GetUsersSubscriptionName(Guid.Parse(currentGuid)));
+            DocumentStore.Subscriptions.Delete(GetOrdersSubscriptionName(Guid.Parse(currentGuid)));
+
+            for (int i = 0; i < _shipperGuid.Length; i++)
+            {
+                DocumentStore.Subscriptions.Delete($"shipperSubscription-{i}.{currentGuid}");
+            }
+        }
+
+        private string GetOrdersSubscriptionName(Guid guid) => $"CreateOrderSubscription.{guid}";
+
+        private string GetUsersSubscriptionName(Guid guid) => $"UsersSubscription.{guid}";        
 
         private void InsertProducts()
         {
@@ -339,7 +375,7 @@ namespace Subscriptions
                         Name = $"prod-{i}",
                         PricePerUnit = i * 5,
                         QuantityPerUnit = i * 3
-                    }, $"products.{GenralGuid}/{guid}");
+                    }, $"products.{GeneralGuid}/{guid}");
                     _productsGuid[i] = guid;
                     session.SaveChanges();
                 }
@@ -357,8 +393,8 @@ namespace Subscriptions
                     guid = Guid.NewGuid();
                     session.Store(new Shipper
                     {
-                        Name = $"shipper.{GenralGuid}-{i}"
-                    }, $"shipper.{GenralGuid}/{guid}");
+                        Name = $"shipper.{GeneralGuid}-{i}"
+                    }, $"shipper.{GeneralGuid}/{guid}");
                     _shipperGuid[i] = guid;
                     session.SaveChanges();
                 }
@@ -376,11 +412,11 @@ namespace Subscriptions
                     guid = Guid.NewGuid();
                     bulkInsert.Store(new User2
                     {
-                        Id = $"user2.{GenralGuid}/{guid}",
+                        Id = $"user2.{GeneralGuid}/{guid}",
                         FirstName = $"firstName{i}",
                         LastName = $"lastName{i}",
                         Age = i
-                    }, $"user2.{GenralGuid}/{guid}");
+                    }, $"user2.{GeneralGuid}/{guid}");
                 }                
                 ReportInfo($"Finish inserting users docs");
             }
@@ -399,7 +435,7 @@ namespace Subscriptions
                     {
                         try
                         {
-                            if (doc.Id.StartsWith($"user2.{GenralGuid}") == false)
+                            if (doc.Id.StartsWith($"user2.{GeneralGuid}") == false)
                             {
                                 startsWithSkipCount++;
                                 continue;
@@ -416,7 +452,7 @@ namespace Subscriptions
                                 var randNumber3 = rand.Next(0, 4);
                                 Debug.Assert(randNumber2 * randNumber3 < ProductsCount);
 
-                                doc.Result.Products.AddFirst($"products.{GenralGuid}/{_productsGuid[randNumber2 * randNumber3]}");
+                                doc.Result.Products.AddFirst($"products.{GeneralGuid}/{_productsGuid[randNumber2 * randNumber3]}");
                             }
                             
                             session.Store(doc.Result);                            
@@ -461,13 +497,13 @@ namespace Subscriptions
 
                         var order = new Order
                         {
-                            ShipVia = $"shipper.{GenralGuid}/{_shipperGuid[shipper]}",
+                            ShipVia = $"shipper.{GeneralGuid}/{_shipperGuid[shipper]}",
                             ShipTo = doc.Id,
                             ProductsNames = list
                         };
                         _shipper[shipper] += 1;
 
-                        session.Store(order, $"order.{GenralGuid}/");
+                        session.Store(order, $"order.{GeneralGuid}/");
                         
                     }
                     session.SaveChanges();
@@ -482,7 +518,7 @@ namespace Subscriptions
             {
                 foreach (var doc in batch.Items)
                 {
-                    if (doc.Id.StartsWith($"order." + GenralGuid) == false)
+                    if (doc.Id.StartsWith($"order." + GeneralGuid) == false)
                         continue;
                     
                     Interlocked.Increment(ref _shipperRes[i]);
