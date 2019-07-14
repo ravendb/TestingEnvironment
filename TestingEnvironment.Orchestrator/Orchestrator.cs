@@ -160,7 +160,7 @@ namespace TestingEnvironment.Orchestrator
                     k++;
                 }
 
-                rc.TotalTestsInRound = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Where(x => x.Author != "TestRunner" && x.Round == rc.Round, true).CountAsync().Result;
+                rc.TotalTestsInRound = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Where(x => x.Author != "TestRunner" && x.Round == rc.Round, false).CountAsync().Result;
                 rc.UniqueFailCount = fails.Count;
 
                 var i = 0;
@@ -309,7 +309,7 @@ namespace TestingEnvironment.Orchestrator
                 session.Advanced.UseOptimisticConcurrency = true;
                 var latestTestInfos = session.Query<TestInfo>()
                     .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Where(x =>
-                        x.Name == testName && x.Round == round && x.TestId == testid).ToList();
+                        x.Name == testName && x.Round == round && x.TestId == testid, false).ToList();
                 if (latestTestInfos.Count != 1)
                 {
                     // This is fatal and should not happen, store this error:
@@ -331,11 +331,11 @@ namespace TestingEnvironment.Orchestrator
             }
         }
 
-        public int GetRound()
+        public int GetRound(string docid)
         {
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
-                var doc = session.Load<StaticInfo>("staticInfo/1");
+                var doc = session.Load<StaticInfo>(docid);
                 if (doc == null)
                 {
                     var newStaticInfo = new StaticInfo
@@ -343,7 +343,7 @@ namespace TestingEnvironment.Orchestrator
                         Round = 1
                     };
 
-                    session.Store(newStaticInfo, "staticInfo/1");
+                    session.Store(newStaticInfo, docid);
                     session.SaveChanges();
                     return 1;
                 }
@@ -352,7 +352,7 @@ namespace TestingEnvironment.Orchestrator
             }
         }
 
-        public int SetRound(string roundStr)
+        public int SetRound(string docid, string roundStr)
         {
             var round = int.Parse(roundStr);
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
@@ -362,10 +362,32 @@ namespace TestingEnvironment.Orchestrator
                     Round = round
                 };
 
-                session.Store(newStaticInfo, "staticInfo/1");
+                session.Store(newStaticInfo, docid);
                 session.SaveChanges();
             }
             return round;
+        }
+
+        public bool Cancel(string testName, string testid, string roundStr)
+        {
+            using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
+            {
+                var docs = session.Query<TestInfo>().Where(x => x.TestId == testid, false).ToList();
+                if (docs.Count != 1)
+                {
+                    // practically - cannot happen
+                    return false;
+                }
+
+                if (docs[0].Name.Equals(testName) == false)
+                {
+                    return false;
+                }
+
+                session.Delete(docs[0].Id);
+                session.SaveChanges();
+            }
+            return true;
         }
 
         public EventResponse ReportEvent(string testName, string testid, string round, EventInfoWithExceptionAsString @event)
@@ -375,7 +397,7 @@ namespace TestingEnvironment.Orchestrator
             {
                 session.Advanced.UseOptimisticConcurrency = true;
 
-                var latestTestInfos = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Where(x => x.Name == testName && x.Round == num && x.TestId == testid).ToList();
+                var latestTestInfos = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Where(x => x.Name == testName && x.Round == num && x.TestId == testid, false).ToList();
                 if (latestTestInfos.Count != 1)
                 {
                     // This is fatal and should not happen, store this error:

@@ -187,7 +187,7 @@ namespace MarineResearch
                         throw;
                     }
 
-                    ReportFailure(message, e, new Dictionary<string, string>() { ["Warning"] = "Failed but retrying..." });
+                    ReportInfo(message);
                     count++;
                 }
             }

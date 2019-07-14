@@ -1,7 +1,4 @@
-﻿using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.ServerWide.Operations;
-using System.Threading.Tasks;
-using TestingEnvironment.Client;
+﻿using TestingEnvironment.Client;
 
 namespace CleanerTask
 {

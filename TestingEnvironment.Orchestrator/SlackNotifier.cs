@@ -48,7 +48,7 @@ namespace TestingEnvironment.Orchestrator
                     }
                     var round = roundResult.Round;
                     var copyRound = round;
-                    var results = session.Query<TestInfo, FailTests>().Where(x => x.Round == copyRound, true).ToListAsync().Result;
+                    var results = session.Query<TestInfo, FailTests>().Where(x => x.Round == copyRound, false).ToListAsync().Result;
                     stdOut.WriteLine("Total=" + results.Count);
                     stdOut.WriteLine("Round=" + round);
                     var fails = new Dictionary<string, int>();
@@ -141,7 +141,7 @@ namespace TestingEnvironment.Orchestrator
                     }
 
                     var copyRound2 = round;
-                    var total = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Where(x => x.Author != "TestRunner" && x.Round == copyRound2, true).CountAsync().Result;
+                    var total = session.Query<TestInfo>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Where(x => x.Author != "TestRunner" && x.Round == copyRound2, false).CountAsync().Result;
                     stdOut.WriteLine($"Out of total={total}");
 
                     var color = "good"; // green
