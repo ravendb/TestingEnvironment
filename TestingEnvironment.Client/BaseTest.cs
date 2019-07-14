@@ -20,6 +20,7 @@ namespace TestingEnvironment.Client
         protected Random Random = new Random(123);
 
         private readonly JsonServiceClient _orchestratorClient;
+        private bool _skipUnregister;
 
         protected BaseTest(string orchestratorUrl, string testName, string author, int round, string testid)
         {
@@ -57,6 +58,18 @@ namespace TestingEnvironment.Client
             catch (Exception e)
             {
                 ReportFailure("Unhandled exception in test code.",e);
+            }
+        }
+
+        public void CancelTest()
+        {
+            ReportInfo("Cancelling test (if this message remains - failed to delete the record from orchestrator)");
+            _skipUnregister = true; // Delete will unregister and then delete the document so we cannot unregister from dispose later on
+            var success =
+                _orchestratorClient.Delete<bool>($"/cancel?testName={TestName}&testid={_testid}&round={_round}");
+            if (success == false)
+            {
+                throw new Exception($"Failed to Delete<bool>(/cancel?testName={TestName}&testid={_testid}&round={_round}");
             }
         }
 
@@ -118,14 +131,14 @@ namespace TestingEnvironment.Client
             return _orchestratorClient.Put<string>($"/custom-command?command={Uri.EscapeDataString(command)}&data={Uri.EscapeDataString(dataString)}", "");
         }
 
-        protected int SetRound(int round)
+        protected int SetRound(string doc, int round)
         {
-            var currentRound = _orchestratorClient.Get<int>($"/get-round");
+            var currentRound = _orchestratorClient.Get<int>($"/get-round?doc={Uri.EscapeDataString(doc)}");
             if (round == 0)
                 round = ++currentRound;
             if (round != -1)
             {
-                var response = _orchestratorClient.Put<dynamic>($"/set-round?round={round}", "");
+                var response = _orchestratorClient.Put<dynamic>($"/set-round?doc={doc}&round={round}", "");
                 currentRound = int.Parse(response);
             }
             return currentRound;
@@ -146,7 +159,8 @@ namespace TestingEnvironment.Client
 
         public virtual void Dispose()
         {
-            _orchestratorClient.Put<object>($"/unregister?testName={TestName}&round={_round}&testid={_testid}",null);
+            if (_skipUnregister == false)
+                _orchestratorClient.Put<object>($"/unregister?testName={TestName}&round={_round}&testid={_testid}",null);
 
             _orchestratorClient.Dispose();
             DocumentStore.Dispose();

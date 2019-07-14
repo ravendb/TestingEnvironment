@@ -44,7 +44,19 @@ namespace TestingEnvironment.Orchestrator
                     Uri.UnescapeDataString((string)Request.Query.testid),
                     Uri.UnescapeDataString((string)Request.Query.round),
                         this.Bind<EventInfoWithExceptionAsString>());
-            });                      
+            });
+
+            Delete("/cancel", @params =>
+            {
+                Orchestrator.Instance.UnregisterTest(Uri.UnescapeDataString(
+                        (string)Request.Query.testName),
+                    Uri.UnescapeDataString((string)Request.Query.round),
+                    Uri.UnescapeDataString((string)Request.Query.testid)
+                );
+                return Orchestrator.Instance.Cancel(Uri.UnescapeDataString((string) Request.Query.testName),
+                    Uri.UnescapeDataString((string) Request.Query.testid),
+                    Uri.UnescapeDataString((string) Request.Query.round));
+            });
 
             //non success tests
             Get<dynamic>("/failing-tests", @params =>
@@ -63,11 +75,12 @@ namespace TestingEnvironment.Orchestrator
                 return Orchestrator.Instance.TrySetConfigSelectorStrategy(Uri.UnescapeDataString((string)Request.Query.strategyName), Uri.UnescapeDataString((string)Request.Query.dbIndex ?? ""));
             });
 
-            Get<dynamic>("/get-round", _ =>
-                 Response.AsJson(Orchestrator.Instance.GetRound()));
+            // GET http://localhost:5000/get-round?doc='staticInfo doc id'
+            Get<dynamic>("/get-round", @params =>
+                Response.AsJson(Orchestrator.Instance.GetRound(Uri.UnescapeDataString((string)Request.Query.doc))));
 
-            //PUT http://localhost:5000/set-round?round=345
-            Put("/set-round", @params => Orchestrator.Instance.SetRound(Request.Query.round).ToString());
+            //PUT http://localhost:5000/set-round?doc='staticInfo doc id'&round=345
+            Put("/set-round", @params => Orchestrator.Instance.SetRound(Uri.UnescapeDataString((string)Request.Query.doc), Request.Query.round).ToString());
 
             Get<dynamic>("/round-results", _ =>
                  Response.AsJson(Orchestrator.Instance.GetRoundResults((string)Request.Query.round)));

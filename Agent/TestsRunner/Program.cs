@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
-using CustomOrchestratorCommands;
 using Raven.Client.Documents;
 using TestingEnvironment.Client;
 using TestingEnvironment.Common.OrchestratorReporting;
@@ -14,18 +14,20 @@ namespace TestsRunner
     {
         public int Round;
         public string DbIndex;
+        public string DocId; // staticInfo/??.. 
 
-        public StrategySet(string orchestratorUrl, string testName, int round, string dbIndex, string testid) : base(orchestratorUrl, testName, "TestRunner", round, testid)
+        public StrategySet(string docid, string orchestratorUrl, string testName, int round, string dbIndex, string testid) : base(orchestratorUrl, testName, "TestRunner", round, testid)
         {
             Round = round;
             DbIndex = dbIndex;
+            DocId = docid;
         }
 
         public override void RunActualTest()
         {
             var success = SetStrategy("FirstClusterRandomDatabaseSelector", DbIndex);
-            Round = SetRound(Round);
-            ReportInfo($"Round set to {Round}");
+            Round = SetRound(DocId, Round);
+            ReportInfo($"Round set to {DocId} :: {Round}");
             if (success)
                 ReportSuccess("Finished successfully");
             else
@@ -45,13 +47,15 @@ namespace TestsRunner
                          Orchestrator listening url (as defined in orchestrator      
                          appsettings.json/OrchestratorUrl).    
 
-                    --ravendbUrl=<url>
-                         Embedded RavenDB url in orchestrator
-                                                                                     
-                     --stdOut=<filepath>                                     
+                    --ravendbPort=<port>
+                         Embedded RavenDB url in orchestrator. Default is 8090
+                    --runnerId=<id>
+                         Round number document name (must be unique if multiple TestsRunner instances are running)
+                         Default is 'staticInfo/1' - used by SlackNotifier
+                    --stdOut=<filepath>                                     
                          Redirect output to a file. If option not specified, StdOut  
                          will be used.                                               
-                     --round=<round number>                                          
+                    --round=<round number>                                          
                          Set or increase round number. If not set, no change done.   
                          Round number above 0 overrides current round number,        
                          setting to 0 will increase current round by one.     
@@ -66,13 +70,26 @@ namespace TestsRunner
             var defaults = new TestRunnerArgs { Round = "-1" };
             var options = new HandleArgs<TestRunnerArgs>().ProcessArgs(args, helpText, defaults);
             TextWriter stdOut = options.StdOut == null ? Console.Out : File.CreateText(options.StdOut);
-            if (options.OrchestratorUrl == null || options.RavendbUrl == null)
+            if (options.OrchestratorUrl == null)
             {
-                Console.WriteLine("--orchestratorUrl and --ravendbUrl must be specified");
+                Console.WriteLine("--orchestratorUrl must be specified");
                 Console.WriteLine();
                 Console.WriteLine(helpText);
                 Environment.Exit(1);
             }
+
+            if (options.RavendbPort == null)
+                options.RavendbPort = "8090";
+
+            var ravenurls = options.OrchestratorUrl.Split(":");
+            if (ravenurls.Length != 3)
+            {
+                Console.WriteLine("orchestrator url must consist port number");
+                Console.WriteLine();
+                Environment.Exit(1);
+            }
+
+            var ravenurl = $"{ravenurls[0]}:{ravenurls[1]}:{options.RavendbPort}";
 
             if (options.CleanLastRunning != null)
             {
@@ -97,6 +114,9 @@ namespace TestsRunner
                 Environment.Exit(1);
             }
 
+            if (options.RunnerId == null)
+                options.RunnerId = "staticInfo/1";
+
             try
             {
 
@@ -116,7 +136,7 @@ namespace TestsRunner
 
                 stdOut.WriteLine("Setting Strategy: FirstClusterRandomDatabaseStrategy");
                 int roundResult;
-                using (var client = new StrategySet(options.OrchestratorUrl, "StrategySet", int.Parse(options.Round), options.DbIndex, Guid.NewGuid().ToString()))
+                using (var client = new StrategySet(options.RunnerId, options.OrchestratorUrl, "StrategySet", int.Parse(options.Round), options.DbIndex, Guid.NewGuid().ToString()))
                 {
                     client.Initialize();
                     client.RunTest();
@@ -158,25 +178,31 @@ namespace TestsRunner
 
                 stdOut.WriteLine();
                 stdOut.WriteLine("Runing Tests:");
+                var spBackup = Stopwatch.StartNew();
+                var spCleanup = Stopwatch.StartNew();
                 int num = 1;
                 while (true)
                 {
                     var testsList = new List<BaseTest>();
                     foreach (var test in tests)
                     {
-                        if (num % 500 != 0 && test.Name.Equals("CleanerTask"))
+                        if (test.Name.Equals("CleanerTask"))
                         {
-                            continue;
+                            if (spCleanup.Elapsed > TimeSpan.FromDays(1))
+                                spCleanup.Restart();
+                            else
+                                continue;
                         }
 
-                        if (num % 5 != 0)
+                        switch (test.Name)
                         {
-                            switch (test.Name)
-                            {
-                                case "BackupTaskCleaner":
-                                case "BackupAndRestore":
+                            case "BackupTaskCleaner":
+                            case "BackupAndRestore":
+                                {
+                                    if (spBackup.Elapsed > TimeSpan.FromHours(1))
+                                        spBackup.Restart();
                                     continue;
-                            }
+                                }
                         }
 
                         if (test.Name.Equals("BackupAndRestore") &&
@@ -206,33 +232,63 @@ namespace TestsRunner
                         var testDisposed = false;
                         try
                         {
-                            var sp = Stopwatch.StartNew();
-                            stdOut.Write($"{num++}: {DateTime.Now} {test.TestName}: Initialize...");
-                            test.Initialize();
-                            stdOut.Write($" RunTest...");
-                            test.RunTest();
-                            stdOut.Write($" Dispose...");
-                            testDisposed = true;
-                            test.Dispose();
-                            stdOut.Write($" Done @ {sp.Elapsed}");
                             using (var store = new DocumentStore
                             {
-                                Urls = new[] { options.RavendbUrl },
+                                Urls = new[] { ravenurl },
                                 Database = "Orchestrator"
                             }.Initialize())
                             {
-                                using (var session = store.OpenAsyncSession())
+                                var sp = Stopwatch.StartNew();
+                                stdOut.Write($"{num++}: {DateTime.Now} {test.TestName}: Initialize...");
+                                test.Initialize();
+
+                                //switch (test.TestName)
+                                {
+                                    // case "HospitalTest":
+                                    {
+                                        using (var session = store.OpenSession())
+                                        {
+                                            // search if test is running in parallel in other rounds:
+                                            var runningTests = session
+                                                .Query<TestInfo, FailTests>()
+                                                .Where(x => x.Name == test.TestName && x.Finished == false, false)
+                                                .Customize(y => y.WaitForNonStaleResults(TimeSpan.FromSeconds(15)))
+                                                .ToList();                                           
+                                            if (runningTests.Count > 1)
+                                            {
+                                                stdOut.WriteLine($" Skipping.. There are {runningTests.Count} other instances of this test running in parallel");
+                                                test.CancelTest(); // dispose must be called now
+                                                stdOut.Write($" Dispose...");
+                                                testDisposed = true;
+                                                test.Dispose();
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                       // break;
+                                }
+
+                                stdOut.Write($" RunTest...");
+                                test.RunTest();
+                                stdOut.Write($" Dispose...");
+                                testDisposed = true;
+                                test.Dispose();
+                                stdOut.Write($" Done @ {sp.Elapsed}");
+
+
+                                using (var asyncSession = store.OpenAsyncSession())
                                 {
                                     stdOut.Write(" Reading index results...");
-                                    var roundResults = session.LoadAsync<StaticInfo>("staticInfo/1").Result;
+                                    var roundResults = asyncSession.LoadAsync<StaticInfo>($"{options.RunnerId}")
+                                        .Result;
                                     var round = roundResults.Round;
                                     var copyRound = round;
-                                    var results = session
+                                    var results = asyncSession
                                         .Query<TestInfo, FailTests>()
-                                        .Where(x => x.Round == copyRound, true)
+                                        .Where(x => x.Round == copyRound, false)
                                         .Customize(y => y.WaitForNonStaleResults(TimeSpan.FromSeconds(15)))
                                         .ToListAsync().Result;
-                                    Console.WriteLine($" Total={results.Count} / Round={round}");
+                                    stdOut.WriteLine($" Total={results.Count} / Round={round}");
                                 }
                             }
                         }
@@ -253,10 +309,6 @@ namespace TestsRunner
                         }
                     }
 
-                    if (num / testsList.Count % 3 == 0)
-                    {
-                        // try send TeAgent clear 
-                    }
                     stdOut.WriteLine();
                 }
             }
@@ -275,7 +327,8 @@ namespace TestsRunner
     public class TestRunnerArgs
     {
         public string OrchestratorUrl { get; set; }
-        public string RavendbUrl { get; set; }
+        public string RavendbPort { get; set; }
+        public string RunnerId { get; set; }
         public string Round { get; set; }
         public string StdOut { get; set; }
         public string DbIndex { get; set; }
