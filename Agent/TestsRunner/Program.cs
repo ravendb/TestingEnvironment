@@ -15,18 +15,20 @@ namespace TestsRunner
         public int Round;
         public string DbIndex;
         public string DocId; // staticInfo/??.. 
+        public string RavendbVersion;
 
-        public StrategySet(string docid, string orchestratorUrl, string testName, int round, string dbIndex, string testid) : base(orchestratorUrl, testName, "TestRunner", round, testid)
+        public StrategySet(string ravendbVersion, string docid, string orchestratorUrl, string testName, int round, string dbIndex, string testid) : base(orchestratorUrl, testName, "TestRunner", round, testid)
         {
             Round = round;
             DbIndex = dbIndex;
             DocId = docid;
+            RavendbVersion = ravendbVersion ?? "N/A";
         }
 
         public override void RunActualTest()
         {
             var success = SetStrategy("FirstClusterRandomDatabaseSelector", DbIndex);
-            Round = SetRound(DocId, Round);
+            Round = SetRound(DocId, Round, RavendbVersion);
             ReportInfo($"Round set to {DocId} :: {Round}");
             if (success)
                 ReportSuccess("Finished successfully");
@@ -65,6 +67,9 @@ namespace TestsRunner
                          Delete not finished entry if single one exists on round.
                          Setting round to 0 will use current round.
                          Utility will exit upon completing deletion.
+                    --ravendbVersion=<string>
+                         Tested version tag.
+                         If staticInfo/1 chosen as runnerId, it will be displayed in slack message.
 ";
 
             var defaults = new TestRunnerArgs { Round = "-1" };
@@ -136,7 +141,7 @@ namespace TestsRunner
 
                 stdOut.WriteLine("Setting Strategy: FirstClusterRandomDatabaseStrategy");
                 int roundResult;
-                using (var client = new StrategySet(options.RunnerId, options.OrchestratorUrl, "StrategySet", int.Parse(options.Round), options.DbIndex, Guid.NewGuid().ToString()))
+                using (var client = new StrategySet(options.RavendbVersion, options.RunnerId, options.OrchestratorUrl, "StrategySet", int.Parse(options.Round), options.DbIndex, Guid.NewGuid().ToString()))
                 {
                     client.Initialize();
                     client.RunTest();
@@ -169,7 +174,7 @@ namespace TestsRunner
                     typeof(Counters.IndexQueryOnCounterNames),
                     typeof(Counters.CounterRevisions),
                     typeof(MarineResearch.MarineResearchTest),
-                    // typeof(Subscriptions.FilterAndProjection),
+                    typeof(Subscriptions.FilterAndProjection),
                     typeof(BackupAndRestore.BackupAndRestore)
                 };
 
@@ -326,6 +331,7 @@ namespace TestsRunner
 
     public class TestRunnerArgs
     {
+        public string RavendbVersion { get; set; }        
         public string OrchestratorUrl { get; set; }
         public string RavendbPort { get; set; }
         public string RunnerId { get; set; }

@@ -47,6 +47,7 @@ namespace TestingEnvironment.Orchestrator
                         return;
                     }
                     var round = roundResult.Round;
+                    var version = roundResult.RavendbVersion;
                     var copyRound = round;
                     var results = session.Query<TestInfo, FailTests>().Where(x => x.Round == copyRound, false).ToListAsync().Result;
                     stdOut.WriteLine("Total=" + results.Count);
@@ -159,7 +160,7 @@ namespace TestingEnvironment.Orchestrator
                                                     {
                                                         ""mrkdwn_in"": [""text""],
                                                         ""color"": """ + color + @""",
-                                                        ""pretext"": ""Testing Environment Results"",
+                                                        ""pretext"": ""Results for: """ + version + @""",
                                                         ""author_name"": ""Round " + round + @" (Click to view)"",
                                                         ""author_link"": """ + rcArgs.OrchestratorUrl + @"/round-results?round=" + round + @""",
                                                         ""author_icon"": ""https://ravendb.net/img/team/adi_avivi.jpg"",

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq.Expressions;
 using Raven.Client.Documents;
 using ServiceStack;
 using TestingEnvironment.Common;
@@ -66,7 +67,7 @@ namespace TestingEnvironment.Client
             ReportInfo("Cancelling test (if this message remains - failed to delete the record from orchestrator)");
             _skipUnregister = true; // Delete will unregister and then delete the document so we cannot unregister from dispose later on
             var success =
-                _orchestratorClient.Delete<bool>($"/cancel?testName={TestName}&testid={_testid}&round={_round}");
+                _orchestratorClient.Delete<bool>($"/cancel?testName={Uri.UnescapeDataString(TestName)}&testid={Uri.UnescapeDataString(_testid)}&round={_round}");
             if (success == false)
             {
                 throw new Exception($"Failed to Delete<bool>(/cancel?testName={TestName}&testid={_testid}&round={_round}");
@@ -131,14 +132,14 @@ namespace TestingEnvironment.Client
             return _orchestratorClient.Put<string>($"/custom-command?command={Uri.EscapeDataString(command)}&data={Uri.EscapeDataString(dataString)}", "");
         }
 
-        protected int SetRound(string doc, int round)
+        protected int SetRound(string doc, int round, string ravendbVersion)
         {
             var currentRound = _orchestratorClient.Get<int>($"/get-round?doc={Uri.EscapeDataString(doc)}");
             if (round == 0)
                 round = ++currentRound;
             if (round != -1)
             {
-                var response = _orchestratorClient.Put<dynamic>($"/set-round?doc={doc}&round={round}", "");
+                var response = _orchestratorClient.Put<dynamic>($"/set-round?doc={doc}&round={round}&version={Uri.UnescapeDataString(ravendbVersion)}", "");
                 currentRound = int.Parse(response);
             }
             return currentRound;
@@ -162,7 +163,14 @@ namespace TestingEnvironment.Client
             if (_skipUnregister == false)
                 _orchestratorClient.Put<object>($"/unregister?testName={TestName}&round={_round}&testid={_testid}",null);
 
-            _orchestratorClient.Dispose();
+            try
+            {
+                _orchestratorClient.Dispose();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Ignoring: {e}");                
+            }
             DocumentStore.Dispose();
         }
     }

@@ -80,7 +80,7 @@ namespace TestingEnvironment.Orchestrator
                 Response.AsJson(Orchestrator.Instance.GetRound(Uri.UnescapeDataString((string)Request.Query.doc))));
 
             //PUT http://localhost:5000/set-round?doc='staticInfo doc id'&round=345
-            Put("/set-round", @params => Orchestrator.Instance.SetRound(Uri.UnescapeDataString((string)Request.Query.doc), Request.Query.round).ToString());
+            Put("/set-round", @params => Orchestrator.Instance.SetRound(Uri.UnescapeDataString((string)Request.Query.doc), Request.Query.round, Uri.UnescapeDataString((string)Request.Query.version)).ToString());
 
             Get<dynamic>("/round-results", _ =>
                  Response.AsJson(Orchestrator.Instance.GetRoundResults((string)Request.Query.round)));

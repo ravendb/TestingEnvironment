@@ -352,14 +352,15 @@ namespace TestingEnvironment.Orchestrator
             }
         }
 
-        public int SetRound(string docid, string roundStr)
+        public int SetRound(string docid, string roundStr, string ravendbVersion)
         {
             var round = int.Parse(roundStr);
             using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
             {
                 var newStaticInfo = new StaticInfo
                 {
-                    Round = round
+                    Round = round,
+                    RavendbVersion = ravendbVersion
                 };
 
                 session.Store(newStaticInfo, docid);
