@@ -10,8 +10,9 @@ namespace TestingEnvironment.Client
         public FailTests()
         {
             Map = tests => from test in tests
-                           where (test.Events.All(x => x.Type != EventInfoWithExceptionAsString.EventType.TestSuccess) ||
-                                  test.Events.Any(x => x.Type == EventInfoWithExceptionAsString.EventType.TestFailure))
+                           where (test.Archived == false && 
+                                  (test.Events.All(x => x.Type != EventInfoWithExceptionAsString.EventType.TestSuccess) ||
+                                  test.Events.Any(x => x.Type == EventInfoWithExceptionAsString.EventType.TestFailure)))
                            select new
                            {
                                test.Id,
@@ -19,7 +20,7 @@ namespace TestingEnvironment.Client
                                test.Name,
                                test.Round,
                                test.Finished,
-                               test.Author
+                               test.Author                               
                            };
         }
     }
@@ -30,13 +31,15 @@ namespace TestingEnvironment.Client
         {
             Map = tests => from test in tests
                 let round = LoadDocument<StaticInfo>("staticInfo/1").Round
-                where (test.Events.All(x => x.Type != EventInfoWithExceptionAsString.EventType.TestSuccess) ||
+                where (test.Archived == false && 
+                       (test.Events.All(x => x.Type != EventInfoWithExceptionAsString.EventType.TestSuccess) ||
                        test.Events.Any(x => x.Type == EventInfoWithExceptionAsString.EventType.TestFailure)) &&
                       test.Finished == true &&
-                      test.Round == round
+                      test.Round == round)
                 select new
                 {
-                    test.Id                    
+                    test.Id,
+                    test.Name
                 };            
         }
     }

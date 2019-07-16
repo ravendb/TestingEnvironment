@@ -17,6 +17,7 @@ namespace TestingEnvironment.Common.OrchestratorReporting
         public int Round { get; set; }
         public List<EventInfoWithExceptionAsString> Events { get;set; }
         public TestConfig Config { get; set; }
+        public bool Archived { get; set; }
     }
 
     public class InternalError

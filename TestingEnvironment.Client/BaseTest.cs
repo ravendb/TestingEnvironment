@@ -132,14 +132,14 @@ namespace TestingEnvironment.Client
             return _orchestratorClient.Put<string>($"/custom-command?command={Uri.EscapeDataString(command)}&data={Uri.EscapeDataString(dataString)}", "");
         }
 
-        protected int SetRound(string doc, int round, string ravendbVersion)
+        protected int SetRound(string doc, int round, string ravendbVersion, bool archive)
         {
             var currentRound = _orchestratorClient.Get<int>($"/get-round?doc={Uri.EscapeDataString(doc)}");
             if (round == 0)
                 round = ++currentRound;
             if (round != -1)
             {
-                var response = _orchestratorClient.Put<dynamic>($"/set-round?doc={doc}&round={round}&version={Uri.UnescapeDataString(ravendbVersion)}", "");
+                var response = _orchestratorClient.Put<dynamic>($"/set-round?doc={doc}&round={round}&version={Uri.UnescapeDataString(ravendbVersion)}&archive={Uri.UnescapeDataString(archive ? "1" : "0")}", "");
                 currentRound = int.Parse(response);
             }
             return currentRound;

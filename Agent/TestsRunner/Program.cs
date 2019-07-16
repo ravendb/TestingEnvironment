@@ -16,24 +16,26 @@ namespace TestsRunner
         public string DbIndex;
         public string DocId; // staticInfo/??.. 
         public string RavendbVersion;
+        public bool Archive;
 
-        public StrategySet(string ravendbVersion, string docid, string orchestratorUrl, string testName, int round, string dbIndex, string testid) : base(orchestratorUrl, testName, "TestRunner", round, testid)
+        public StrategySet(string ravendbVersion, string docid, string orchestratorUrl, string testName, int round, string dbIndex, string testid, bool archive) : base(orchestratorUrl, testName, "TestRunner", round, testid)
         {
             Round = round;
             DbIndex = dbIndex;
             DocId = docid;
             RavendbVersion = ravendbVersion ?? "N/A";
+            Archive = archive;
         }
 
         public override void RunActualTest()
         {
             var success = SetStrategy("FirstClusterRandomDatabaseSelector", DbIndex);
-            Round = SetRound(DocId, Round, RavendbVersion);
+            Round = SetRound(DocId, Round, RavendbVersion, Archive);
             ReportInfo($"Round set to {DocId} :: {Round}");
             if (success)
                 ReportSuccess("Finished successfully");
             else
-                ReportFailure("Finished with failures", null);
+                ReportFailure("Finished with failures", null);        
         }
     }
 
@@ -48,7 +50,6 @@ namespace TestsRunner
                      --orchestratorUrl=<url>                                         
                          Orchestrator listening url (as defined in orchestrator      
                          appsettings.json/OrchestratorUrl).    
-
                     --ravendbPort=<port>
                          Embedded RavenDB url in orchestrator. Default is 8090
                     --runnerId=<id>
@@ -64,12 +65,17 @@ namespace TestsRunner
                     --dbIndex=<dbIndex>
                          Optionally for FirstClusterStrategy, select specific database from config file
                     --cleanLastRunning=<round>
-                         Delete not finished entry if single one exists on round.
+                         Delete not finished entries on a specific round.
                          Setting round to 0 will use current round.
                          Utility will exit upon completing deletion.
+                    --setAllArchived=set
+                         Set all tests in round as archived before starting the round.
+                         The archived tests will not appear in indexes.
                     --ravendbVersion=<string>
                          Tested version tag.
                          If staticInfo/1 chosen as runnerId, it will be displayed in slack message.
+                    --excludeTests=<string, ...>
+                         Comma separated (insensitive case) test names to exclude.
 ";
 
             var defaults = new TestRunnerArgs { Round = "-1" };
@@ -117,10 +123,12 @@ namespace TestsRunner
 
                 Console.WriteLine($"CleanLastRound sent for round {cleanInRound}");
                 Environment.Exit(1);
-            }
+            }            
 
             if (options.RunnerId == null)
                 options.RunnerId = "staticInfo/1";
+
+            var excludeTests = new HashSet<string>();
 
             try
             {
@@ -133,15 +141,21 @@ namespace TestsRunner
                 stdOut.WriteLine(
                     $"Arch / Process / Cores: {Environment.ProcessorCount} / {RuntimeInformation.OSArchitecture} / {RuntimeInformation.ProcessArchitecture}");
                 stdOut.WriteLine();
-                stdOut.WriteLine($"OrcestratorUrl: {options.OrchestratorUrl}");
+                stdOut.WriteLine($"OrchestratorUrl: {options.OrchestratorUrl}");
                 stdOut.WriteLine($"Round: {options.Round}");
                 stdOut.WriteLine($"DbIndex: {options.DbIndex}");
                 stdOut.WriteLine();
                 stdOut.Flush();
 
                 stdOut.WriteLine("Setting Strategy: FirstClusterRandomDatabaseStrategy");
+                var archive = false;
+                if (options.SetAllArchived != null && options.SetAllArchived.ToLower().Equals("set"))
+                {
+                    Console.WriteLine($"Also archiving all old tests in {options.Round}");
+                    archive = true;
+                }
                 int roundResult;
-                using (var client = new StrategySet(options.RavendbVersion, options.RunnerId, options.OrchestratorUrl, "StrategySet", int.Parse(options.Round), options.DbIndex, Guid.NewGuid().ToString()))
+                using (var client = new StrategySet(options.RavendbVersion, options.RunnerId, options.OrchestratorUrl, "StrategySet", int.Parse(options.Round), options.DbIndex, Guid.NewGuid().ToString(), archive))
                 {
                     client.Initialize();
                     client.RunTest();
@@ -153,7 +167,7 @@ namespace TestsRunner
                 Console.WriteLine("Setting round: " + options.Round);
 
 
-                stdOut.Write("Loading Tests: ");
+                stdOut.WriteLine("Loading Tests...");
 
                 var tests = new[]
                 {
@@ -178,11 +192,27 @@ namespace TestsRunner
                     typeof(BackupAndRestore.BackupAndRestore)
                 };
 
+                if (options.ExcludeTests != null)
+                {
+                    var testsToExclude = options.ExcludeTests.Split(",");
+                    foreach (var specifiedTestToExclude in testsToExclude)
+                    {
+                        foreach (var test in tests)
+                        {
+                            if (test.Name.Equals(specifiedTestToExclude))
+                            {
+                                excludeTests.Add(test.Name);
+                                Console.WriteLine($"Excluding test: {test.Name}");
+                            }
+                        }
+                    }
+                }
+
                 var ctorTypes = new[] { typeof(string), typeof(string), typeof(int), typeof(string) };
                 stdOut.WriteLine();
 
                 stdOut.WriteLine();
-                stdOut.WriteLine("Runing Tests:");
+                stdOut.WriteLine("Running Tests:");
                 var spBackup = Stopwatch.StartNew();
                 var spCleanup = Stopwatch.StartNew();
                 int num = 1;
@@ -206,12 +236,18 @@ namespace TestsRunner
                                 {
                                     if (spBackup.Elapsed > TimeSpan.FromHours(1))
                                         spBackup.Restart();
-                                    continue;
+                                    else
+                                        continue;
                                 }
+                                break;
                         }
 
                         if (test.Name.Equals("BackupAndRestore") &&
                             (Environment.GetEnvironmentVariable("RAVEN_CLOUD_MACHINE") ?? "N").Contains("Y", StringComparison.InvariantCultureIgnoreCase))
+                            continue;
+
+
+                        if (excludeTests.Contains(test.Name))
                             continue;
 
                         if (tests[0] != test)
@@ -231,6 +267,7 @@ namespace TestsRunner
                         testsList.Add(instance);
                     }
 
+                    Console.WriteLine();
 
                     foreach (var test in testsList)
                     {
@@ -247,30 +284,24 @@ namespace TestsRunner
                                 stdOut.Write($"{num++}: {DateTime.Now} {test.TestName}: Initialize...");
                                 test.Initialize();
 
-                                //switch (test.TestName)
+                                using (var session = store.OpenSession())
                                 {
-                                    // case "HospitalTest":
+                                    // search if test is running in parallel in other rounds:
+                                    var runningTests = session
+                                        .Query<TestInfo, FailTests>()
+                                        .Where(x => x.Name == test.TestName && x.Finished == false, false)
+                                        .Customize(y => y.WaitForNonStaleResults(TimeSpan.FromSeconds(15)))
+                                        .ToList();
+                                    if (runningTests.Count > 1)
                                     {
-                                        using (var session = store.OpenSession())
-                                        {
-                                            // search if test is running in parallel in other rounds:
-                                            var runningTests = session
-                                                .Query<TestInfo, FailTests>()
-                                                .Where(x => x.Name == test.TestName && x.Finished == false, false)
-                                                .Customize(y => y.WaitForNonStaleResults(TimeSpan.FromSeconds(15)))
-                                                .ToList();                                           
-                                            if (runningTests.Count > 1)
-                                            {
-                                                stdOut.WriteLine($" Skipping.. There are {runningTests.Count} other instances of this test running in parallel");
-                                                test.CancelTest(); // dispose must be called now
-                                                stdOut.Write($" Dispose...");
-                                                testDisposed = true;
-                                                test.Dispose();
-                                                continue;
-                                            }
-                                        }
+                                        stdOut.WriteLine(
+                                            $" Skipping.. There are {runningTests.Count - 1} other instances of this test running in parallel");
+                                        test.CancelTest(); // dispose must be called now
+                                        stdOut.Write($" Dispose...");
+                                        testDisposed = true;
+                                        test.Dispose();
+                                        continue;
                                     }
-                                       // break;
                                 }
 
                                 stdOut.Write($" RunTest...");
@@ -339,5 +370,7 @@ namespace TestsRunner
         public string StdOut { get; set; }
         public string DbIndex { get; set; }
         public string CleanLastRunning { get; set; }
+        public string ExcludeTests { get; set; }
+        public string SetAllArchived { get; set; }
     }
 }
