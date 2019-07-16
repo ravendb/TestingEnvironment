@@ -4,8 +4,6 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Text;
-using System.Threading;
-using Microsoft.Extensions.Configuration;
 using Raven.Client.Documents;
 using TestingEnvironment.Client;
 using TestingEnvironment.Common.OrchestratorReporting;
@@ -19,16 +17,17 @@ namespace TestingEnvironment.Orchestrator
             public string UserEmail { get; set; }
             public string UserName { get; set; }
             public string Uri { get; set; }
+            public bool ForceUpdate { get; set; }
         }
 
         public class NotifierArgs
         {
             public string RavendbUrl { get; set; }
             public string OrchestratorUrl { get; set; }
-            public string ForceUpdate { get; set; }
+            public bool ForceUpdate { get; set; }
         }
 
-        public static void ReadAndNotify(NotifierArgs rcArgs, bool forceUpdate, ref int lastDaySent, TextWriter stdOut, NotifierConfig appConfig)
+        public static void ReadAndNotify(NotifierArgs rcArgs, ref int lastDaySent, TextWriter stdOut, NotifierConfig appConfig)
         {
             stdOut.WriteLine();
             using (var store = new DocumentStore
@@ -47,6 +46,7 @@ namespace TestingEnvironment.Orchestrator
                         return;
                     }
                     var round = roundResult.Round;
+                    var version = roundResult.RavendbVersion;
                     var copyRound = round;
                     var results = session.Query<TestInfo, FailTests>().Where(x => x.Round == copyRound, false).ToListAsync().Result;
                     stdOut.WriteLine("Total=" + results.Count);
@@ -159,7 +159,7 @@ namespace TestingEnvironment.Orchestrator
                                                     {
                                                         ""mrkdwn_in"": [""text""],
                                                         ""color"": """ + color + @""",
-                                                        ""pretext"": ""Testing Environment Results"",
+                                                        ""pretext"": ""Results for: " + version + @""",
                                                         ""author_name"": ""Round " + round + @" (Click to view)"",
                                                         ""author_link"": """ + rcArgs.OrchestratorUrl + @"/round-results?round=" + round + @""",
                                                         ""author_icon"": ""https://ravendb.net/img/team/adi_avivi.jpg"",
@@ -180,11 +180,11 @@ namespace TestingEnvironment.Orchestrator
 
                     var now = DateTime.Now;
                     stdOut.WriteLine($"now={now}, now.Hour={now.Hour}, now.Day={now.Day}, lastDaySent={lastDaySent}");
-                    if (forceUpdate || (now.Hour >= 9 &&
+                    if (rcArgs.ForceUpdate || (now.Hour >= 9 &&
                         now.Day != lastDaySent))
                     {
                         stdOut.WriteLine();
-                        stdOut.WriteLine("Sending:");
+                        stdOut.WriteLine($"Sending to {appConfig.Uri}:");
                         stdOut.WriteLine(msgstring);
 
                         lastDaySent = now.Day;

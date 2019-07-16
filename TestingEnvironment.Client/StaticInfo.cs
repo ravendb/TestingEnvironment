@@ -3,5 +3,6 @@
     public class StaticInfo
     {
         public int Round;
+        public string RavendbVersion;
     }
 }

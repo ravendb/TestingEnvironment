@@ -9,6 +9,7 @@ using Castle.Windsor;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Embedded;
@@ -352,14 +353,25 @@ namespace TestingEnvironment.Orchestrator
             }
         }
 
-        public int SetRound(string docid, string roundStr)
+        public int SetRound(string docid, string roundStr, string ravendbVersion, string archive)
         {
             var round = int.Parse(roundStr);
-            using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
+
+            if (archive.Equals("1"))
             {
+                var operation = _reportingDocumentStore.Operations.Send(new PatchByQueryOperation(
+                    $@"from TestInfos as t
+                              where t.Round == {round}
+                              update {{ this.Archived = true }}"));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
+            }
+
+            using (var session = _reportingDocumentStore.OpenSession(OrchestratorDatabaseName))
+            {                
                 var newStaticInfo = new StaticInfo
                 {
-                    Round = round
+                    Round = round,
+                    RavendbVersion = ravendbVersion
                 };
 
                 session.Store(newStaticInfo, docid);
@@ -442,15 +454,22 @@ namespace TestingEnvironment.Orchestrator
                     {
                         var results = session.Query<TestInfo, FailTests>().Customize(y => y.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).
                             Where(x => x.Round == round && x.Finished == false && x.Name.Equals("CleanLastRound") == false, true).ToListAsync().Result;
-                        if (results.Count != 1)
-                        {
-                            rc.CommandStatus = "Failed";
-                            rc.Reason = $"Query result list count is {results.Count} and should be only 1. Probably fails exists";
-                            return rc.ToString();
-                        }
 
-                        session.Delete(results.First().Id);
-                        session.SaveChangesAsync().Wait();                        
+                        foreach (var testInfo in results)
+                        {
+                            try
+                            {
+                                session.Delete(testInfo.Id);
+                                session.SaveChangesAsync().Wait();
+                            }
+                            catch (Exception e)
+                            {
+                                rc.CommandStatus = "Failed";
+                                rc.Reason =
+                                    $"Query result list count is {results.Count}. Failure for Id: {testInfo.Id}. Exception: {e}";
+                                return rc.ToString();
+                            }                            
+                        }
                     }
 
                     break;

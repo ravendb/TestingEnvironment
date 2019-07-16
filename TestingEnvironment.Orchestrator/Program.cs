@@ -16,12 +16,12 @@ namespace TestingEnvironment.Orchestrator
 
         public static void LaunchReadAndNotify()
         {
-            var firstRun = true;
+            var firstRun = true;            
             var lastDaySent = DateTime.Now.Day;
             NotifierArgs rcArgs = new NotifierArgs
             {
                 OrchestratorUrl = _appConfig.OrchestratorUrl,
-                ForceUpdate = "none",
+                ForceUpdate = _appConfig.NotifierConfig.ForceUpdate,
                 RavendbUrl = _appConfig.EmbeddedServerUrl
 
             };
@@ -34,7 +34,7 @@ namespace TestingEnvironment.Orchestrator
                     {
                         using (var fw = new StreamWriter(fs))
                         {
-                            ReadAndNotify(rcArgs, false, ref lastDaySent, fw, _appConfig.NotifierConfig);
+                            ReadAndNotify(rcArgs, ref lastDaySent, fw, _appConfig.NotifierConfig);
                             fw.Flush();
                         }
                     }
